@@ -3,327 +3,130 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Booking Website</title>
+    <title>Alan Psychic Reading</title>
     <style>
       body {
-        background-color: #81d8d0;
-        font-family: Arial, sans-serif;
         margin: 0;
-        padding: 20px;
+        font-family: "Arial", sans-serif;
+        background: linear-gradient(135deg, #81d8d0, #d0e7f9);
         display: flex;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
-      }
-
-      .booking-form {
-        background: white;
+        text-align: center;
         padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-        max-width: 400px;
-        width: 100%;
-      }
-
-      .booking-form h2 {
-        text-align: center;
-        color: #0abab5;
-      }
-
-      .form-group {
-        margin-bottom: 15px;
-      }
-
-      label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-      }
-
-      input,
-      select,
-      button {
-        width: 95%;
-        padding: 10px;
-        margin-top: 5px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-      }
-
-      .time-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 10px;
-        min-height: 80px;
-        align-items: center;
-        justify-content: center;
-        border: 2px dotted #ccc;
-        padding: 20px;
-        text-align: center;
-      }
-
-      .placeholder-text {
-        color: #666;
-        font-style: italic;
-      }
-
-      .time-button {
-        flex: 1 1 calc(45% - 10px);
-        background-color: #0abab5;
-        color: white;
-        border: none;
-        padding: 10px;
-        border-radius: 5px;
-        cursor: pointer;
-        text-align: center;
         box-sizing: border-box;
       }
 
-      .time-button.disabled {
-        background-color: #cccccc;
-        cursor: not-allowed;
+      .home-container {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        width: 100%;
       }
 
-      .time-button.selected {
-        background-color: #089e9a;
+      h1 {
+        font-size: 2em;
+        color: #0abab5;
+        margin-bottom: 10px;
       }
 
-      button[type="submit"] {
+      p {
+        color: #555;
+        margin-bottom: 20px;
+        font-style: italic;
+      }
+
+      .make-appointment {
         background-color: #0abab5;
         color: white;
-        font-weight: bold;
         border: none;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-size: 1em;
         cursor: pointer;
+        transition: background-color 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
       }
 
-      button[type="submit"]:hover {
+      .make-appointment:hover {
         background-color: #089e9a;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      #passwordPrompt {
+        margin-top: 20px;
+      }
+
+      input[type="password"] {
+        padding: 10px;
+        margin-top: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        width: 100%;
+        box-sizing: border-box;
       }
 
       @media (max-width: 600px) {
-        .booking-form {
-          padding: 15px;
+        h1 {
+          font-size: 1.5em;
+        }
+
+        .make-appointment {
+          width: 100%;
         }
       }
     </style>
   </head>
   <body>
-    <form class="booking-form" id="bookingForm">
-      <h2>Book Your Slot</h2>
+    <div class="home-container">
+      <h1>Alan Psychic Reading</h1>
+      <p>
+        Unlock the mysteries of your life. Receive deep insights about love,
+        career, and destiny from Alan, the renowned psychic reader. Your journey
+        to clarity and peace begins here.
+      </p>
+      <button class="make-appointment" onclick="showPasswordPrompt()">
+        Make Appointment
+      </button>
 
-      <div class="form-group">
-        <label for="name">Name</label>
-        <input type="text" id="name" required />
+      <div id="passwordPrompt" class="hidden">
+        <input
+          type="password"
+          id="passwordInput"
+          placeholder="Enter Password"
+        />
+        <button
+          class="make-appointment"
+          style="margin-top: 10px"
+          onclick="checkPassword()"
+        >
+          Submit
+        </button>
       </div>
+    </div>
 
-      <div class="form-group">
-        <label for="phone">Phone Number</label>
-        <div style="display: flex; align-items: center">
-          <span
-            style="
-              margin-top: 5px;
-              padding: 10px;
-              background: #eee;
-              border-right: none;
-              border-radius: 5px 0 0 5px;
-            "
-            >+60</span
-          >
-          <input
-            type="tel"
-            id="phone"
-            style="border-radius: 0 5px 5px 0; border-left: none"
-            required
-          />
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" id="email" required />
-      </div>
-
-      <div class="form-group">
-        <label for="pax">Number of Pax</label>
-        <select id="pax" required>
-          <option value="">Select pax</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="date">Date</label>
-        <select id="date" required>
-          <option value="">Select date</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Time</label>
-        <div class="time-buttons" id="timeButtons">
-          <div class="placeholder-text" id="placeholderText">
-            Please select pax number and date
-          </div>
-        </div>
-      </div>
-
-      <input type="hidden" id="selectedTime" name="selectedTime" required />
-
-      <button type="submit">Submit Booking</button>
-    </form>
     <script>
-      const paxSelect = document.getElementById("pax");
-      const dateSelect = document.getElementById("date");
-      const timeButtonsDiv = document.getElementById("timeButtons");
-      const selectedTimeInput = document.getElementById("selectedTime");
+      function showPasswordPrompt() {
+        document.getElementById("passwordPrompt").classList.remove("hidden");
+      }
 
-      const slotsData = [
-        {
-          date: "2025-04-29",
-          slots: [
-            { time: "12:00 PM", available: true },
-            { time: "1:00 PM", available: true },
-            { time: "2:00 PM", available: false },
-            { time: "3:00 PM", available: true },
-            { time: "4:00 PM", available: true },
-            { time: "5:00 PM", available: true },
-          ],
-        },
-        {
-          date: "2025-04-30",
-          slots: [
-            { time: "12:00 PM", available: false },
-            { time: "1:00 PM", available: false },
-            { time: "2:00 PM", available: false },
-            { time: "3:00 PM", available: false },
-            { time: "4:00 PM", available: false },
-            { time: "5:00 PM", available: false },
-          ],
-        },
-      ];
-
-      function findConsecutiveSlots(slots, pax) {
-        for (let i = 0; i <= slots.length - pax; i++) {
-          let allAvailable = true;
-          for (let j = 0; j < pax; j++) {
-            if (!slots[i + j] || !slots[i + j].available) {
-              allAvailable = false;
-              break;
-            }
-          }
-          if (allAvailable) return true;
+      function checkPassword() {
+        const correctPassword = "psychic123";
+        const userPassword = document.getElementById("passwordInput").value;
+        if (userPassword === correctPassword) {
+          localStorage.setItem("auth", "granted"); // Save auth
+          window.location.href = "booking.html";
+        } else {
+          alert("Incorrect password. Please try again.");
         }
-        return false;
       }
-
-      function reloadDateOptions() {
-        const pax = parseInt(paxSelect.value) || 1;
-        dateSelect.innerHTML = '<option value="">Select date</option>';
-
-        slotsData.forEach((day) => {
-          const hasConsecutive = findConsecutiveSlots(day.slots, pax);
-          const option = document.createElement("option");
-          option.value = day.date;
-          option.textContent = hasConsecutive
-            ? day.date
-            : `${day.date} (Fully booked)`;
-          if (!hasConsecutive) {
-            option.disabled = true;
-            option.style.color = "gray";
-          }
-          dateSelect.appendChild(option);
-        });
-      }
-
-      function generateTimeButtons(pax) {
-        timeButtonsDiv.innerHTML = "";
-        const selectedDay = slotsData.find(
-          (day) => day.date === dateSelect.value
-        );
-        if (!selectedDay) return;
-
-        selectedDay.slots.forEach((slot, index) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "time-button";
-          button.textContent = slot.time;
-          button.dataset.index = index;
-
-          // Check if enough consecutive slots are available from this slot
-          let consecutiveAvailable = true;
-          if (index + pax > selectedDay.slots.length) {
-            consecutiveAvailable = false;
-          } else {
-            for (let i = 0; i < pax; i++) {
-              if (!selectedDay.slots[index + i]?.available) {
-                consecutiveAvailable = false;
-                break;
-              }
-            }
-          }
-
-          if (!consecutiveAvailable) {
-            button.disabled = true;
-            button.classList.add("disabled");
-          }
-
-          button.addEventListener("click", function () {
-            if (this.classList.contains("disabled")) return;
-            if (this.classList.contains("selected")) {
-              document
-                .querySelectorAll(".time-button")
-                .forEach((btn) => btn.classList.remove("selected"));
-              selectedTimeInput.value = "";
-              return;
-            }
-            document
-              .querySelectorAll(".time-button")
-              .forEach((btn) => btn.classList.remove("selected"));
-            const selectedIndexes = [];
-            const startIdx = parseInt(this.dataset.index);
-            for (let i = 0; i < pax; i++) {
-              const btn = document.querySelector(
-                `.time-button[data-index='${startIdx + i}']`
-              );
-              if (btn) btn.classList.add("selected");
-              selectedIndexes.push(btn?.textContent);
-            }
-            selectedTimeInput.value = selectedIndexes.join(", ");
-          });
-
-          timeButtonsDiv.appendChild(button);
-        });
-      }
-
-      dateSelect.addEventListener("change", function () {
-        if (paxSelect.value) generateTimeButtons(parseInt(paxSelect.value));
-      });
-
-      paxSelect.addEventListener("change", function () {
-        reloadDateOptions();
-        timeButtonsDiv.innerHTML = ""; // Clear time buttons when pax changed
-        selectedTimeInput.value = ""; // Clear selected time
-      });
-
-      document
-        .getElementById("bookingForm")
-        .addEventListener("submit", function (e) {
-          e.preventDefault();
-          if (!selectedTimeInput.value) {
-            alert("Please select a time slot!");
-            return;
-          }
-          alert("Booking Submitted!");
-        });
-
-      // Initialize
-      [1, 2, 3, 4, 5, 6].forEach((p) => {
-        const option = document.createElement("option");
-        option.value = p;
-        option.textContent = `${p} pax`;
-        paxSelect.appendChild(option);
-      });
-      reloadDateOptions();
     </script>
   </body>
 </html>
