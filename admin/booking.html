@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Booking Management</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css"
+    />
+    <style>
+      body {
+        background: #f4f8f9;
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+        color: #0abab5;
+        margin-bottom: 20px;
+      }
+
+      .modal-content {
+        border-radius: 10px;
+      }
+
+      .filter {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Booking Slot Management</h1>
+
+    <div class="filter">
+      <label for="filterDate">Filter by Date: </label>
+      <input type="date" id="filterDate" />
+    </div>
+
+    <div class="table-responsive">
+      <table id="slotsTable" class="table table-bordered text-center">
+        <thead class="table-primary">
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Availability</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Rows will be injected here -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="modal fade" id="bookingModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Booking Details</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body" id="modalDetails"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+      const slotsData = [
+        { id: 1, date: "2025-04-29", time: "12:00 PM", availability: true },
+        { id: 2, date: "2025-04-29", time: "1:00 PM", availability: true },
+        { id: 3, date: "2025-04-29", time: "2:00 PM", availability: false },
+        { id: 4, date: "2025-04-29", time: "3:00 PM", availability: true },
+        { id: 5, date: "2025-04-29", time: "4:00 PM", availability: true },
+        { id: 6, date: "2025-04-29", time: "5:00 PM", availability: true },
+        { id: 7, date: "2025-04-30", time: "12:00 PM", availability: false },
+        { id: 8, date: "2025-04-30", time: "1:00 PM", availability: false },
+        { id: 9, date: "2025-04-30", time: "2:00 PM", availability: true },
+        { id: 10, date: "2025-04-30", time: "3:00 PM", availability: false },
+        { id: 11, date: "2025-04-30", time: "4:00 PM", availability: false },
+        { id: 12, date: "2025-04-30", time: "5:00 PM", availability: false },
+        { id: 13, date: "2025-05-01", time: "12:00 PM", availability: true },
+        { id: 14, date: "2025-05-01", time: "1:00 PM", availability: true },
+        { id: 15, date: "2025-05-01", time: "2:00 PM", availability: false },
+        { id: 4, date: "2025-05-01", time: "3:00 PM", availability: true },
+        { id: 5, date: "2025-05-01", time: "4:00 PM", availability: true },
+        { id: 6, date: "2025-05-01", time: "5:00 PM", availability: true },
+        { id: 7, date: "2025-05-02", time: "12:00 PM", availability: false },
+        { id: 8, date: "2025-05-02", time: "1:00 PM", availability: false },
+        { id: 9, date: "2025-05-02", time: "2:00 PM", availability: false },
+        { id: 10, date: "2025-05-02", time: "3:00 PM", availability: false },
+        { id: 11, date: "2025-05-02", time: "4:00 PM", availability: false },
+        { id: 12, date: "2025-05-02", time: "5:00 PM", availability: false },
+      ];
+
+      function populateTable() {
+        const tbody = $("#slotsTable tbody");
+        tbody.empty();
+        slotsData.sort((a, b) =>
+          a.date > b.date
+            ? 1
+            : a.date < b.date
+            ? -1
+            : a.time.localeCompare(b.time)
+        );
+
+        let currentDate = "";
+        let stripeClass = "";
+
+        slotsData.forEach((slot) => {
+          if (slot.date !== currentDate) {
+            currentDate = slot.date;
+            stripeClass =
+              stripeClass === "table-light" ? "table-secondary" : "table-light"; // toggle between two styles
+          }
+
+          const row = `
+      <tr class="${stripeClass}">
+        <td>${slot.date}</td>
+        <td>${slot.time}</td>
+        <td>
+          ${
+            slot.availability
+              ? "Available"
+              : `<button class="btn btn-info btn-sm" onclick="openModal(${slot.id})">View</button>`
+          }
+        </td>
+      </tr>
+    `;
+          tbody.append(row);
+        });
+      }
+
+      function openModal(id) {
+        const slot = slotsData.find((s) => s.id === id);
+        if (slot) {
+          $("#modalDetails").html(`
+      <p><strong>ID:</strong> ${slot.id}</p>
+      <p><strong>Date:</strong> ${slot.date}</p>
+      <p><strong>Time:</strong> ${slot.time}</p>
+      <p><strong>Status:</strong> ${
+        slot.availability ? "Available" : "Booked"
+      }</p>
+    `);
+          const bookingModal = new bootstrap.Modal(
+            document.getElementById("bookingModal")
+          );
+          bookingModal.show();
+        }
+      }
+
+      $(document).ready(function () {
+        populateTable();
+        const table = $("#slotsTable").DataTable({
+          pageLength: 12,
+          lengthChange: false,
+        });
+
+        $("#filterDate").on("change", function () {
+          const filterDate = this.value;
+          table.column(1).search(filterDate).draw();
+        });
+      });
+    </script>
+  </body>
+</html>

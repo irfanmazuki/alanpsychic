@@ -173,6 +173,7 @@
     </form>
     <script>
       if (localStorage.getItem("auth") !== "granted") {
+        alert("Please enter the password before accessing the booking page");
         window.location.href = "index.html"; // Redirect back if not authorized
       }
       const paxSelect = document.getElementById("pax");
