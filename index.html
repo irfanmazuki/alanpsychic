@@ -55,6 +55,17 @@
         flex-wrap: wrap;
         gap: 10px;
         margin-top: 10px;
+        min-height: 80px;
+        align-items: center;
+        justify-content: center;
+        border: 2px dotted #ccc;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .placeholder-text {
+        color: #666;
+        font-style: italic;
       }
 
       .time-button {
@@ -66,6 +77,7 @@
         border-radius: 5px;
         cursor: pointer;
         text-align: center;
+        box-sizing: border-box;
       }
 
       .time-button.disabled {
@@ -148,7 +160,11 @@
 
       <div class="form-group">
         <label>Time</label>
-        <div class="time-buttons" id="timeButtons"></div>
+        <div class="time-buttons" id="timeButtons">
+          <div class="placeholder-text" id="placeholderText">
+            Please select pax number and date
+          </div>
+        </div>
       </div>
 
       <input type="hidden" id="selectedTime" name="selectedTime" required />
