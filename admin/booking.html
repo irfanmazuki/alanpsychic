@@ -79,43 +79,37 @@
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
     <script>
-      const slotsData = [
-        { id: 1, date: "2025-04-29", time: "12:00 PM", availability: true },
-        { id: 2, date: "2025-04-29", time: "1:00 PM", availability: true },
-        { id: 3, date: "2025-04-29", time: "2:00 PM", availability: false },
-        { id: 4, date: "2025-04-29", time: "3:00 PM", availability: true },
-        { id: 5, date: "2025-04-29", time: "4:00 PM", availability: true },
-        { id: 6, date: "2025-04-29", time: "5:00 PM", availability: true },
-        { id: 7, date: "2025-04-30", time: "12:00 PM", availability: false },
-        { id: 8, date: "2025-04-30", time: "1:00 PM", availability: false },
-        { id: 9, date: "2025-04-30", time: "2:00 PM", availability: true },
-        { id: 10, date: "2025-04-30", time: "3:00 PM", availability: false },
-        { id: 11, date: "2025-04-30", time: "4:00 PM", availability: false },
-        { id: 12, date: "2025-04-30", time: "5:00 PM", availability: false },
-        { id: 13, date: "2025-05-01", time: "12:00 PM", availability: true },
-        { id: 14, date: "2025-05-01", time: "1:00 PM", availability: true },
-        { id: 15, date: "2025-05-01", time: "2:00 PM", availability: false },
-        { id: 4, date: "2025-05-01", time: "3:00 PM", availability: true },
-        { id: 5, date: "2025-05-01", time: "4:00 PM", availability: true },
-        { id: 6, date: "2025-05-01", time: "5:00 PM", availability: true },
-        { id: 7, date: "2025-05-02", time: "12:00 PM", availability: false },
-        { id: 8, date: "2025-05-02", time: "1:00 PM", availability: false },
-        { id: 9, date: "2025-05-02", time: "2:00 PM", availability: false },
-        { id: 10, date: "2025-05-02", time: "3:00 PM", availability: false },
-        { id: 11, date: "2025-05-02", time: "4:00 PM", availability: false },
-        { id: 12, date: "2025-05-02", time: "5:00 PM", availability: false },
-      ];
+      var slotsData = [];
+
+      var table; // move this to global scope
+
+      function loadSlots() {
+        $.ajax({
+          url: "../api/api.php?action=get_timeslots",
+          method: "GET",
+          success: function (response) {
+            slotsData = response;
+            populateTable();
+
+            if ($.fn.DataTable.isDataTable("#slotsTable")) {
+              table.destroy(); // destroy previous table instance first
+            }
+
+            table = $("#slotsTable").DataTable({
+              pageLength: 12,
+              lengthChange: false,
+            });
+          },
+          error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+          },
+        });
+      }
 
       function populateTable() {
         const tbody = $("#slotsTable tbody");
         tbody.empty();
-        slotsData.sort((a, b) =>
-          a.date > b.date
-            ? 1
-            : a.date < b.date
-            ? -1
-            : a.time.localeCompare(b.time)
-        );
+        slotsData.sort((a, b) => a.date.localeCompare(b.date));
 
         let currentDate = "";
         let stripeClass = "";
@@ -128,18 +122,18 @@
           }
 
           const row = `
-      <tr class="${stripeClass}">
-        <td>${slot.date}</td>
-        <td>${slot.time}</td>
-        <td>
-          ${
-            slot.availability
-              ? "Available"
-              : `<button class="btn btn-info btn-sm" onclick="openModal(${slot.id})">View</button>`
-          }
-        </td>
-      </tr>
-    `;
+        <tr class="${stripeClass}">
+          <td>${slot.date}</td>
+          <td>${slot.time}</td>
+          <td>
+            ${
+              slot.availability == 1
+                ? "Available"
+                : `<button class="btn btn-info btn-sm" onclick="openModal(${slot.id})">View</button>`
+            }
+          </td>
+        </tr>
+      `;
           tbody.append(row);
         });
       }
@@ -148,13 +142,13 @@
         const slot = slotsData.find((s) => s.id === id);
         if (slot) {
           $("#modalDetails").html(`
-      <p><strong>ID:</strong> ${slot.id}</p>
-      <p><strong>Date:</strong> ${slot.date}</p>
-      <p><strong>Time:</strong> ${slot.time}</p>
-      <p><strong>Status:</strong> ${
-        slot.availability ? "Available" : "Booked"
-      }</p>
-    `);
+        <p><strong>ID:</strong> ${slot.id}</p>
+        <p><strong>Date:</strong> ${slot.date}</p>
+        <p><strong>Time:</strong> ${slot.time}</p>
+        <p><strong>Status:</strong> ${
+          slot.availability ? "Available" : "Booked"
+        }</p>
+      `);
           const bookingModal = new bootstrap.Modal(
             document.getElementById("bookingModal")
           );
@@ -163,15 +157,10 @@
       }
 
       $(document).ready(function () {
-        populateTable();
-        const table = $("#slotsTable").DataTable({
-          pageLength: 12,
-          lengthChange: false,
-        });
-
+        loadSlots(); // Only call loadSlots
         $("#filterDate").on("change", function () {
           const filterDate = this.value;
-          table.column(1).search(filterDate).draw();
+          table.column(0).search(filterDate).draw();
         });
       });
     </script>
