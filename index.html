@@ -43,7 +43,7 @@
       input,
       select,
       button {
-        width: 100%;
+        width: 95%;
         padding: 10px;
         margin-top: 5px;
         border: 1px solid #ccc;
@@ -107,7 +107,24 @@
 
       <div class="form-group">
         <label for="phone">Phone Number</label>
-        <input type="tel" id="phone" required />
+        <div style="display: flex; align-items: center">
+          <span
+            style="
+              margin-top: 5px;
+              padding: 10px;
+              background: #eee;
+              border-right: none;
+              border-radius: 5px 0 0 5px;
+            "
+            >+60</span
+          >
+          <input
+            type="tel"
+            id="phone"
+            style="border-radius: 0 5px 5px 0; border-left: none"
+            required
+          />
+        </div>
       </div>
 
       <div class="form-group">
