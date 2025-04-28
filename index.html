@@ -119,71 +119,123 @@
         <label for="pax">Number of Pax</label>
         <select id="pax" required>
           <option value="">Select pax</option>
-          <option value="1">1 pax</option>
-          <option value="2">2 pax</option>
-          <option value="3">3 pax</option>
-          <option value="4">4 pax</option>
-          <option value="5">5 pax</option>
-          <option value="6">6 pax</option>
         </select>
       </div>
 
       <div class="form-group">
         <label for="date">Date</label>
-        <input type="date" id="date" required min="" />
+        <select id="date" required>
+          <option value="">Select date</option>
+        </select>
       </div>
 
       <div class="form-group">
         <label>Time</label>
-        <div class="time-buttons" id="timeButtons">
-          <!-- Time buttons will be generated here -->
-        </div>
+        <div class="time-buttons" id="timeButtons"></div>
       </div>
 
       <input type="hidden" id="selectedTime" name="selectedTime" required />
 
       <button type="submit">Submit Booking</button>
     </form>
-
     <script>
       const paxSelect = document.getElementById("pax");
-      const dateInput = document.getElementById("date");
+      const dateSelect = document.getElementById("date");
       const timeButtonsDiv = document.getElementById("timeButtons");
       const selectedTimeInput = document.getElementById("selectedTime");
 
-      const timeSlots = [
-        { time: "12:00 PM", available: true },
-        { time: "1:00 PM", available: true },
-        { time: "2:00 PM", available: false },
-        { time: "3:00 PM", available: true },
-        { time: "4:00 PM", available: true },
-        { time: "5:00 PM", available: true },
+      const slotsData = [
+        {
+          date: "2025-04-29",
+          slots: [
+            { time: "12:00 PM", available: true },
+            { time: "1:00 PM", available: true },
+            { time: "2:00 PM", available: false },
+            { time: "3:00 PM", available: true },
+            { time: "4:00 PM", available: true },
+            { time: "5:00 PM", available: true },
+          ],
+        },
+        {
+          date: "2025-04-30",
+          slots: [
+            { time: "12:00 PM", available: false },
+            { time: "1:00 PM", available: false },
+            { time: "2:00 PM", available: false },
+            { time: "3:00 PM", available: false },
+            { time: "4:00 PM", available: false },
+            { time: "5:00 PM", available: false },
+          ],
+        },
       ];
 
-      function setMinDateToday() {
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, "0");
-        const dd = String(today.getDate()).padStart(2, "0");
-        dateInput.min = `${yyyy}-${mm}-${dd}`;
+      function findConsecutiveSlots(slots, pax) {
+        for (let i = 0; i <= slots.length - pax; i++) {
+          let allAvailable = true;
+          for (let j = 0; j < pax; j++) {
+            if (!slots[i + j] || !slots[i + j].available) {
+              allAvailable = false;
+              break;
+            }
+          }
+          if (allAvailable) return true;
+        }
+        return false;
+      }
+
+      function reloadDateOptions() {
+        const pax = parseInt(paxSelect.value) || 1;
+        dateSelect.innerHTML = '<option value="">Select date</option>';
+
+        slotsData.forEach((day) => {
+          const hasConsecutive = findConsecutiveSlots(day.slots, pax);
+          const option = document.createElement("option");
+          option.value = day.date;
+          option.textContent = hasConsecutive
+            ? day.date
+            : `${day.date} (Fully booked)`;
+          if (!hasConsecutive) {
+            option.disabled = true;
+            option.style.color = "gray";
+          }
+          dateSelect.appendChild(option);
+        });
       }
 
       function generateTimeButtons(pax) {
         timeButtonsDiv.innerHTML = "";
+        const selectedDay = slotsData.find(
+          (day) => day.date === dateSelect.value
+        );
+        if (!selectedDay) return;
 
-        timeSlots.forEach((slot, index) => {
+        selectedDay.slots.forEach((slot, index) => {
           const button = document.createElement("button");
           button.type = "button";
           button.className = "time-button";
           button.textContent = slot.time;
           button.dataset.index = index;
 
+          // Check if enough consecutive slots are available from this slot
+          let consecutiveAvailable = true;
+          if (index + pax > selectedDay.slots.length) {
+            consecutiveAvailable = false;
+          } else {
+            for (let i = 0; i < pax; i++) {
+              if (!selectedDay.slots[index + i]?.available) {
+                consecutiveAvailable = false;
+                break;
+              }
+            }
+          }
+
+          if (!consecutiveAvailable) {
+            button.disabled = true;
+            button.classList.add("disabled");
+          }
+
           button.addEventListener("click", function () {
             if (this.classList.contains("disabled")) return;
-            if (!dateInput.value) {
-              alert("Please select a date first!");
-              return;
-            }
             if (this.classList.contains("selected")) {
               document
                 .querySelectorAll(".time-button")
@@ -208,56 +260,16 @@
 
           timeButtonsDiv.appendChild(button);
         });
-
-        updateAvailableSlots(pax);
       }
 
-      function updateAvailableSlots(pax) {
-        const buttons = document.querySelectorAll(".time-button");
-        const paxNum = parseInt(pax);
-
-        buttons.forEach((btn, idx) => {
-          let isAvailable = true;
-
-          if (idx + paxNum > timeSlots.length) {
-            isAvailable = false;
-          } else {
-            for (let i = 0; i < paxNum; i++) {
-              if (!timeSlots[idx + i] || !timeSlots[idx + i].available) {
-                isAvailable = false;
-                break;
-              }
-            }
-          }
-
-          if (isAvailable) {
-            btn.disabled = false;
-            btn.classList.remove("disabled");
-          } else {
-            btn.disabled = true;
-            btn.classList.add("disabled");
-          }
-        });
-      }
-
-      dateInput.addEventListener("change", function () {
-        const selectedDate = new Date(this.value);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (selectedDate < today) {
-          alert("Please select today or a future date.");
-          this.value = "";
-          timeButtonsDiv.innerHTML = "";
-        } else if (paxSelect.value) {
-          generateTimeButtons(paxSelect.value);
-        }
+      dateSelect.addEventListener("change", function () {
+        if (paxSelect.value) generateTimeButtons(parseInt(paxSelect.value));
       });
 
       paxSelect.addEventListener("change", function () {
-        if (dateInput.value) {
-          generateTimeButtons(this.value);
-        }
+        reloadDateOptions();
+        timeButtonsDiv.innerHTML = ""; // Clear time buttons when pax changed
+        selectedTimeInput.value = ""; // Clear selected time
       });
 
       document
@@ -271,7 +283,14 @@
           alert("Booking Submitted!");
         });
 
-      setMinDateToday();
+      // Initialize
+      [1, 2, 3, 4, 5, 6].forEach((p) => {
+        const option = document.createElement("option");
+        option.value = p;
+        option.textContent = `${p} pax`;
+        paxSelect.appendChild(option);
+      });
+      reloadDateOptions();
     </script>
   </body>
 </html>
