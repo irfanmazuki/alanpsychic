@@ -1,16 +1,277 @@
 <!DOCTYPE html>
 <html lang="en">
-  <meta charset="UTF-8" />
-  <title>Homepage</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="" />
-  <style></style>
-  <script src=""></script>
-  <body>
-    <img src="img_la.jpg" alt="LA" style="width: 100%" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Booking Website</title>
+    <style>
+      body {
+        background-color: #81d8d0;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
 
-    <div class="">
-      <h1>Make your booking here</h1>
-    </div>
+      .booking-form {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        width: 100%;
+      }
+
+      .booking-form h2 {
+        text-align: center;
+        color: #0abab5;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+
+      input,
+      select,
+      button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+
+      .time-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .time-button {
+        flex: 1 1 calc(45% - 10px);
+        background-color: #0abab5;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-align: center;
+      }
+
+      .time-button.disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+
+      .time-button.selected {
+        background-color: #089e9a;
+      }
+
+      button[type="submit"] {
+        background-color: #0abab5;
+        color: white;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+      }
+
+      button[type="submit"]:hover {
+        background-color: #089e9a;
+      }
+
+      @media (max-width: 600px) {
+        .booking-form {
+          padding: 15px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <form class="booking-form" id="bookingForm">
+      <h2>Book Your Slot</h2>
+
+      <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" id="name" required />
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Phone Number</label>
+        <input type="tel" id="phone" required />
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required />
+      </div>
+
+      <div class="form-group">
+        <label for="pax">Number of Pax</label>
+        <select id="pax" required>
+          <option value="">Select pax</option>
+          <option value="1">1 pax</option>
+          <option value="2">2 pax</option>
+          <option value="3">3 pax</option>
+          <option value="4">4 pax</option>
+          <option value="5">5 pax</option>
+          <option value="6">6 pax</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="date">Date</label>
+        <input type="date" id="date" required min="" />
+      </div>
+
+      <div class="form-group">
+        <label>Time</label>
+        <div class="time-buttons" id="timeButtons">
+          <!-- Time buttons will be generated here -->
+        </div>
+      </div>
+
+      <input type="hidden" id="selectedTime" name="selectedTime" required />
+
+      <button type="submit">Submit Booking</button>
+    </form>
+
+    <script>
+      const paxSelect = document.getElementById("pax");
+      const dateInput = document.getElementById("date");
+      const timeButtonsDiv = document.getElementById("timeButtons");
+      const selectedTimeInput = document.getElementById("selectedTime");
+
+      const timeSlots = [
+        { time: "12:00 PM", available: true },
+        { time: "1:00 PM", available: true },
+        { time: "2:00 PM", available: false },
+        { time: "3:00 PM", available: true },
+        { time: "4:00 PM", available: true },
+        { time: "5:00 PM", available: true },
+      ];
+
+      function setMinDateToday() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, "0");
+        const dd = String(today.getDate()).padStart(2, "0");
+        dateInput.min = `${yyyy}-${mm}-${dd}`;
+      }
+
+      function generateTimeButtons(pax) {
+        timeButtonsDiv.innerHTML = "";
+
+        timeSlots.forEach((slot, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "time-button";
+          button.textContent = slot.time;
+          button.dataset.index = index;
+
+          button.addEventListener("click", function () {
+            if (this.classList.contains("disabled")) return;
+            if (!dateInput.value) {
+              alert("Please select a date first!");
+              return;
+            }
+            if (this.classList.contains("selected")) {
+              document
+                .querySelectorAll(".time-button")
+                .forEach((btn) => btn.classList.remove("selected"));
+              selectedTimeInput.value = "";
+              return;
+            }
+            document
+              .querySelectorAll(".time-button")
+              .forEach((btn) => btn.classList.remove("selected"));
+            const selectedIndexes = [];
+            const startIdx = parseInt(this.dataset.index);
+            for (let i = 0; i < pax; i++) {
+              const btn = document.querySelector(
+                `.time-button[data-index='${startIdx + i}']`
+              );
+              if (btn) btn.classList.add("selected");
+              selectedIndexes.push(btn?.textContent);
+            }
+            selectedTimeInput.value = selectedIndexes.join(", ");
+          });
+
+          timeButtonsDiv.appendChild(button);
+        });
+
+        updateAvailableSlots(pax);
+      }
+
+      function updateAvailableSlots(pax) {
+        const buttons = document.querySelectorAll(".time-button");
+        const paxNum = parseInt(pax);
+
+        buttons.forEach((btn, idx) => {
+          let isAvailable = true;
+
+          if (idx + paxNum > timeSlots.length) {
+            isAvailable = false;
+          } else {
+            for (let i = 0; i < paxNum; i++) {
+              if (!timeSlots[idx + i] || !timeSlots[idx + i].available) {
+                isAvailable = false;
+                break;
+              }
+            }
+          }
+
+          if (isAvailable) {
+            btn.disabled = false;
+            btn.classList.remove("disabled");
+          } else {
+            btn.disabled = true;
+            btn.classList.add("disabled");
+          }
+        });
+      }
+
+      dateInput.addEventListener("change", function () {
+        const selectedDate = new Date(this.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedDate < today) {
+          alert("Please select today or a future date.");
+          this.value = "";
+          timeButtonsDiv.innerHTML = "";
+        } else if (paxSelect.value) {
+          generateTimeButtons(paxSelect.value);
+        }
+      });
+
+      paxSelect.addEventListener("change", function () {
+        if (dateInput.value) {
+          generateTimeButtons(this.value);
+        }
+      });
+
+      document
+        .getElementById("bookingForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          if (!selectedTimeInput.value) {
+            alert("Please select a time slot!");
+            return;
+          }
+          alert("Booking Submitted!");
+        });
+
+      setMinDateToday();
+    </script>
   </body>
 </html>
