@@ -182,48 +182,61 @@ function getBookingSlots($conn) {
   }
 
   function submitBooking($conn) {
-    $bookingNumber = generateBookingNumber();
     $name = $_POST['name'] ?? '';
     $phone = $_POST['phone'] ?? '';
     $email = $_POST['email'] ?? '';
-    $pax = $_POST['pax'] ?? 1;
+    $pax = intval($_POST['pax'] ?? 1);
     $timeslotIds = $_POST['timeslot_ids'] ?? [];
   
     if (!$name || !$phone || !$email || empty($timeslotIds)) {
-      echo json_encode(["success" => false, "message" => "Missing required fields."]);
+      echo json_encode(["success" => false, "message" => "Missing booking data."]);
       return;
     }
   
     $conn->begin_transaction();
     try {
-      // Check all requested slots are available
-      $idsList = implode(",", array_map('intval', $timeslotIds));
-      $checkSql = "SELECT COUNT(*) AS cnt FROM timeslots WHERE id IN ($idsList) AND availability = 1";
-      $result = $conn->query($checkSql);
-      $row = $result->fetch_assoc();
-      
-      if ($row['cnt'] != count($timeslotIds)) {
-        throw new Exception("One or more selected timeslots are already booked.{$timeslotIds}");
+      // ✅ Step 1: Check if user exists
+      $stmtUser = $conn->prepare("SELECT id FROM users WHERE phone_number = ?");
+      $stmtUser->bind_param("s", $phone);
+      $stmtUser->execute();
+      $resultUser = $stmtUser->get_result();
+      $userId = null;
+  
+      if ($resultUser->num_rows > 0) {
+        // User exists
+        $userRow = $resultUser->fetch_assoc();
+        $userId = $userRow['id'];
+      } else {
+        // User does not exist, create new
+        $stmtNewUser = $conn->prepare("INSERT INTO users (phone_number, name, email, isBlacklisted) VALUES (?, ?, ?, 0)");
+        $stmtNewUser->bind_param("sss", $phone, $name, $email);
+        $stmtNewUser->execute();
+        $userId = $stmtNewUser->insert_id;
       }
   
-      // Insert into booking
-      $createdDate = date('Y-m-d H:i:s');
-      $stmt = $conn->prepare("INSERT INTO booking (name, phone_number, email, pax_number, created_date, isCancelled, booking_number) VALUES (?, ?, ?, ?, ?, 0, ?)");
-      $stmt->bind_param("sssiss", $name, $phone, $email, $pax, $createdDate, $bookingNumber);
-      $stmt->execute();
-      $bookingId = $stmt->insert_id;
+      // ✅ Step 2: Generate random booking number
+      $bookingNumber = generateBookingNumber();
   
-      // Insert booking slots and mark timeslots as booked
-      foreach ($timeslotIds as $timeslotId) {
-        $slotIdInt = intval($timeslotId);
+      // ✅ Step 3: Insert into booking table
+      $stmtBooking = $conn->prepare("
+        INSERT INTO booking (user_id, name, phone_number, email, pax_number, booking_number, created_date, isCancelled)
+        VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)
+      ");
+      $stmtBooking->bind_param("isssis", $userId, $name, $phone, $email, $pax, $bookingNumber);
+      $stmtBooking->execute();
+      $bookingId = $stmtBooking->insert_id;
   
-        $stmt2 = $conn->prepare("INSERT INTO booking_slot (booking_id, timeslot_id) VALUES (?, ?)");
-        $stmt2->bind_param("ii", $bookingId, $slotIdInt);
-        $stmt2->execute();
+      // ✅ Step 4: Update selected timeslots and create booking_slot records
+      foreach ($timeslotIds as $slotId) {
+        // Update timeslot to unavailable
+        $stmtUpdateSlot = $conn->prepare("UPDATE timeslots SET availability = 0 WHERE id = ?");
+        $stmtUpdateSlot->bind_param("i", $slotId);
+        $stmtUpdateSlot->execute();
   
-        $stmt3 = $conn->prepare("UPDATE timeslots SET availability = 0 WHERE id = ?");
-        $stmt3->bind_param("i", $slotIdInt);
-        $stmt3->execute();
+        // Link timeslot to booking
+        $stmtLinkSlot = $conn->prepare("INSERT INTO booking_slot (booking_id, timeslot_id) VALUES (?, ?)");
+        $stmtLinkSlot->bind_param("ii", $bookingId, $slotId);
+        $stmtLinkSlot->execute();
       }
   
       $conn->commit();
