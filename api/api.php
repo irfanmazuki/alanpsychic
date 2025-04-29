@@ -44,7 +44,10 @@ switch ($action) {
         break;
     case 'get_users_list':
         getUsersList($conn);
-        break;     
+        break;  
+    case 'toggle_blacklist':
+        toggleBlacklist($conn);
+        break;
     default:
         echo json_encode(["error" => "No valid action provided."]);
         break;
@@ -468,6 +471,25 @@ function getBookingSlots($conn) {
     echo json_encode(["success" => true, "users" => $users]);
   }
 
+  function toggleBlacklist($conn) {
+    $userId = $_POST['user_id'] ?? null;
+    $isBlacklisted = $_POST['isBlacklisted'] ?? null;
+  
+    if (!$userId || !isset($isBlacklisted)) {
+      echo json_encode(["success" => false, "message" => "Missing parameters."]);
+      return;
+    }
+  
+    $stmt = $conn->prepare("UPDATE users SET isBlacklisted = ? WHERE id = ?");
+    $stmt->bind_param("ii", $isBlacklisted, $userId);
+  
+    if ($stmt->execute()) {
+      echo json_encode(["success" => true]);
+    } else {
+      echo json_encode(["success" => false, "message" => "Database error."]);
+    }
+  }
+  
   function generateBookingNumber($length = 6) {
     $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     $charactersLength = strlen($characters);

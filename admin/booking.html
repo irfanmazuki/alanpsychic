@@ -48,23 +48,29 @@
       <label for="filterDate">Filter by Date: </label>
       <input type="date" id="filterDate" />
     </div>
-    <div class="mb-4 text-center">
-      <p>
-        <strong>Slots currently filled until:</strong>
-        <span id="latestDate">Loading...</span>
-      </p>
-      <div class="d-flex justify-content-center align-items-center gap-2 mt-3">
+    <div class="row g-2 justify-content-center my-3">
+      <div class="col-12 col-sm-auto">
         <input
           type="date"
           id="addUntilDate"
           class="form-control"
-          style="max-width: 200px"
+          style="max-width: 200px; width: 100%"
         />
-        <button class="btn btn-primary" onclick="addSlots()">Add Slots</button>
-        <!-- Notification Button -->
-        <button class="btn btn-warning" onclick="openNotificationModal()">
+      </div>
+      <div class="col-12 col-sm-auto">
+        <button class="btn btn-primary w-100" onclick="addSlots()">
+          Add Slots
+        </button>
+      </div>
+      <div class="col-12 col-sm-auto">
+        <button class="btn btn-warning w-100" onclick="openNotificationModal()">
           History
         </button>
+      </div>
+      <div class="col-12 col-sm-auto">
+        <a href="users.html" class="btn btn-secondary w-100"
+          >👥 View All Users</a
+        >
       </div>
     </div>
 
