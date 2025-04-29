@@ -106,11 +106,10 @@
           method: "GET",
           success: function (response) {
             slotsData = response;
-            populateTable();
-
             if ($.fn.DataTable.isDataTable("#slotsTable")) {
               table.destroy();
             }
+            populateTable();
 
             table = $("#slotsTable").DataTable({
               pageLength: 12,
@@ -228,25 +227,25 @@
           }
 
           const row = `
-<tr class="${stripeClass}">
-  <td>${slot.date}</td>
-  <td>${slot.time}</td>
-  <td>${slot.booking_number ? slot.booking_number : "-"}</td>
-  <td>
-    ${slot.availability == 1 ? "Available" : "Booked"}
-  </td>
-  <td>
-    ${
-      slot.booking_number
-        ? `<button class="btn btn-info btn-sm" onclick="openModal('${slot.booking_number}')">View Booking</button>`
-        : ""
-    }
-    <button class="btn btn-danger btn-sm" onclick="deleteSlot(${
-      slot.id
-    })">Delete</button>
-  </td>
-</tr>
-`;
+            <tr class="${stripeClass}">
+            <td>${slot.date}</td>
+            <td>${slot.time}</td>
+            <td>${slot.booking_number ? slot.booking_number : "-"}</td>
+            <td>
+                ${slot.availability == 1 ? "Available" : "Booked"}
+            </td>
+            <td>
+                ${
+                  slot.booking_number
+                    ? `<button class="btn btn-info btn-sm" onclick="openModal('${slot.booking_number}')">View Booking</button>`
+                    : ""
+                }
+                <button class="btn btn-danger btn-sm" onclick="deleteSlot(${
+                  slot.id
+                })">Delete</button>
+            </td>
+            </tr>
+            `;
           tbody.append(row);
         });
       }
@@ -260,7 +259,7 @@
           success: function (response) {
             if (response.success) {
               const booking = response.booking;
-              $("#modalDetails").html(`
+              let modalContent = `
           <p><strong>Booking Number:</strong> ${bookingNumber}</p>
           <p><strong>Name:</strong> ${booking.name}</p>
           <p><strong>Phone:</strong> +60${booking.phone_number}</p>
@@ -268,7 +267,22 @@
           <p><strong>Pax:</strong> ${booking.pax_number}</p>
           <p><strong>Date:</strong> ${booking.date}</p>
           <p><strong>Timeslots:</strong> ${booking.timeslots.join(", ")}</p>
-        `);
+        `;
+
+              if (booking.isCancelled == 1) {
+                modalContent += `
+            <div class="alert alert-danger mt-3">
+              This booking has been cancelled.
+            </div>
+          `;
+              } else {
+                modalContent += `
+            <br>
+            <button class="btn btn-danger" onclick="adminCancelBooking('${bookingNumber}')">Cancel This Booking</button>
+          `;
+              }
+
+              $("#modalDetails").html(modalContent);
             } else {
               $("#modalDetails").html(`<p>${response.message}</p>`);
             }
@@ -281,6 +295,35 @@
           error: function (xhr, status, error) {
             console.error("AJAX Error:", error);
             alert("Error fetching booking details.");
+          },
+        });
+      }
+
+      function adminCancelBooking(bookingNumber) {
+        if (
+          !confirm(
+            "Are you sure you want to cancel this booking? This cannot be undone."
+          )
+        ) {
+          return;
+        }
+
+        $.ajax({
+          url: "../api/api.php?action=cancel_booking",
+          method: "POST",
+          data: { booking_number: bookingNumber },
+          success: function (response) {
+            if (response.success) {
+              alert("Booking cancelled successfully!");
+              $("#bookingModal").modal("hide");
+              loadSlots();
+            } else {
+              alert("Failed to cancel booking: " + response.message);
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Error occurred while cancelling booking.");
           },
         });
       }

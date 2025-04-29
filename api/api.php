@@ -48,23 +48,26 @@ $conn->close();
 
 function getTimeslots($conn) {
     $sql = "
-      SELECT 
-        t.id,
-        t.date,
-        t.time,
-        t.availability,
-        b.booking_number
-      FROM 
-        timeslots t
-      LEFT JOIN 
-        booking_slot bs ON bs.timeslot_id = t.id
-      LEFT JOIN 
-        booking b ON bs.booking_id = b.id AND b.isCancelled = 0
-      WHERE 
-        t.date >= CURDATE()
-      ORDER BY 
-        t.date ASC, t.time ASC
-    ";
+        SELECT 
+            t.id,
+            t.date,
+            t.time,
+            t.availability,
+            MAX(b.booking_number) AS booking_number
+        FROM 
+            timeslots t
+        LEFT JOIN 
+            booking_slot bs ON bs.timeslot_id = t.id
+        LEFT JOIN 
+            booking b ON bs.booking_id = b.id AND b.isCancelled = 0
+        WHERE 
+            t.date >= CURDATE()
+        GROUP BY 
+            t.id, t.date, t.time, t.availability
+        ORDER BY 
+            t.date ASC, t.time ASC
+
+        ";
   
     $result = $conn->query($sql);
     $timeslots = [];
