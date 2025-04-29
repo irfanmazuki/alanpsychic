@@ -183,6 +183,8 @@
       const dateSelect = document.getElementById("date");
       const timeButtonsDiv = document.getElementById("timeButtons");
       const selectedTimeInput = document.getElementById("selectedTime");
+      let selectedTimeIds = [];
+      let selectedTimeLabels = [];
 
       var slotsData = [];
 
@@ -233,6 +235,50 @@
         });
       }
 
+      function bookingSlot() {
+        const name = $("#name").val().trim();
+        const phone = $("#phone").val().trim();
+        const email = $("#email").val().trim();
+        const pax = $("#pax").val();
+        const date = $("#date").val();
+
+        if (!selectedTimeIds.length) {
+          alert("Please select a time slot!");
+          return;
+        }
+
+        const confirmBooking = confirm(
+          `${selectedTimeIds}Confirm booking for:\n\nName: ${name}\nPhone: +60${phone}\nEmail: ${email}\nPax: ${pax}\nDate: ${date}\nTimes: ${selectedTimeLabels.join(
+            ", "
+          )}`
+        );
+        if (!confirmBooking) return;
+
+        $.ajax({
+          url: "api/api.php?action=submit_booking",
+          method: "POST",
+          data: {
+            name: name,
+            phone: phone,
+            email: email,
+            pax: pax,
+            timeslot_ids: selectedTimeIds, // Send ID list
+          },
+          success: function (response) {
+            if (response.success) {
+              alert("Booking successful!");
+              window.location.reload();
+            } else {
+              alert("Booking failed: " + response.message);
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Error occurred while submitting booking.");
+          },
+        });
+      }
+
       function generateTimeButtons(pax) {
         timeButtonsDiv.innerHTML = "";
         const selectedDay = slotsData.find(
@@ -246,6 +292,7 @@
           button.className = "time-button";
           button.textContent = slot.time;
           button.dataset.index = index;
+          button.dataset.id = slot.id;
 
           // Check if enough consecutive slots are available from this slot
           let consecutiveAvailable = true;
@@ -267,26 +314,26 @@
 
           button.addEventListener("click", function () {
             if (this.classList.contains("disabled")) return;
-            if (this.classList.contains("selected")) {
-              document
-                .querySelectorAll(".time-button")
-                .forEach((btn) => btn.classList.remove("selected"));
-              selectedTimeInput.value = "";
-              return;
-            }
+
             document
               .querySelectorAll(".time-button")
               .forEach((btn) => btn.classList.remove("selected"));
-            const selectedIndexes = [];
+            selectedTimeIds = [];
+            selectedTimeLabels = [];
+
             const startIdx = parseInt(this.dataset.index);
             for (let i = 0; i < pax; i++) {
               const btn = document.querySelector(
                 `.time-button[data-index='${startIdx + i}']`
               );
-              if (btn) btn.classList.add("selected");
-              selectedIndexes.push(btn?.textContent);
+              if (btn) {
+                btn.classList.add("selected");
+                selectedTimeIds.push(btn.dataset.id);
+                selectedTimeLabels.push(btn.textContent);
+              }
             }
-            selectedTimeInput.value = selectedIndexes.join(", ");
+
+            selectedTimeInput.value = selectedTimeIds.join(","); // Save only IDs into hidden input
           });
 
           timeButtonsDiv.appendChild(button);
@@ -311,7 +358,7 @@
             alert("Please select a time slot!");
             return;
           }
-          alert("Booking Submitted!");
+          bookingSlot();
         });
 
       // Initialize

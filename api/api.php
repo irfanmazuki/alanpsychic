@@ -30,6 +30,9 @@ switch ($action) {
     case 'delete_slot':
         deleteSlot($conn);
         break;  
+    case 'submit_booking':
+        submitBooking($conn);
+        break;
     default:
         echo json_encode(["error" => "No valid action provided."]);
         break;
@@ -58,7 +61,7 @@ function getTimeslots($conn) {
 
 function getBookingSlots($conn) {
     $today = date('Y-m-d');
-    $sql = "SELECT date, time, availability FROM timeslots WHERE date >= '$today' ORDER BY date ASC, time ASC";
+    $sql = "SELECT id, date, time, availability FROM timeslots WHERE date >= '$today' ORDER BY date ASC, time ASC";
     $result = $conn->query($sql);
   
     $rawSlots = [];
@@ -146,5 +149,58 @@ function getBookingSlots($conn) {
       echo json_encode(["success" => false, "message" => $stmt->error]);
     }
   }
+
+  function submitBooking($conn) {
+    $name = $_POST['name'] ?? '';
+    $phone = $_POST['phone'] ?? '';
+    $email = $_POST['email'] ?? '';
+    $pax = $_POST['pax'] ?? 1;
+    $timeslotIds = $_POST['timeslot_ids'] ?? [];
+  
+    if (!$name || !$phone || !$email || empty($timeslotIds)) {
+      echo json_encode(["success" => false, "message" => "Missing required fields."]);
+      return;
+    }
+  
+    $conn->begin_transaction();
+    try {
+      // Check all requested slots are available
+      $idsList = implode(",", array_map('intval', $timeslotIds));
+      $checkSql = "SELECT COUNT(*) AS cnt FROM timeslots WHERE id IN ($idsList) AND availability = 1";
+      $result = $conn->query($checkSql);
+      $row = $result->fetch_assoc();
+      
+      if ($row['cnt'] != count($timeslotIds)) {
+        throw new Exception("One or more selected timeslots are already booked.{$timeslotIds}");
+      }
+  
+      // Insert into booking
+      $createdDate = date('Y-m-d H:i:s');
+      $stmt = $conn->prepare("INSERT INTO booking (name, phone_number, email, pax_number, created_date, isCancelled) VALUES (?, ?, ?, ?, ?, 0)");
+      $stmt->bind_param("sssis", $name, $phone, $email, $pax, $createdDate);
+      $stmt->execute();
+      $bookingId = $stmt->insert_id;
+  
+      // Insert booking slots and mark timeslots as booked
+      foreach ($timeslotIds as $timeslotId) {
+        $slotIdInt = intval($timeslotId);
+  
+        $stmt2 = $conn->prepare("INSERT INTO booking_slot (booking_id, timeslot_id) VALUES (?, ?)");
+        $stmt2->bind_param("ii", $bookingId, $slotIdInt);
+        $stmt2->execute();
+  
+        $stmt3 = $conn->prepare("UPDATE timeslots SET availability = 0 WHERE id = ?");
+        $stmt3->bind_param("i", $slotIdInt);
+        $stmt3->execute();
+      }
+  
+      $conn->commit();
+      echo json_encode(["success" => true]);
+    } catch (Exception $e) {
+      $conn->rollback();
+      echo json_encode(["success" => false, "message" => $e->getMessage()]);
+    }
+  }
+  
   
 ?>
