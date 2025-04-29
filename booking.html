@@ -248,7 +248,7 @@
         }
 
         const confirmBooking = confirm(
-          `${selectedTimeIds}Confirm booking for:\n\nName: ${name}\nPhone: +60${phone}\nEmail: ${email}\nPax: ${pax}\nDate: ${date}\nTimes: ${selectedTimeLabels.join(
+          `Confirm booking for:\n\nName: ${name}\nPhone: +60${phone}\nEmail: ${email}\nPax: ${pax}\nDate: ${date}\nTimes: ${selectedTimeLabels.join(
             ", "
           )}`
         );
@@ -281,6 +281,7 @@
 
       function generateTimeButtons(pax) {
         timeButtonsDiv.innerHTML = "";
+        console.log(slotsData);
         const selectedDay = slotsData.find(
           (day) => day.date === dateSelect.value
         );

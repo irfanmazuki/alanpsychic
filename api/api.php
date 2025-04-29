@@ -81,6 +81,7 @@ function getBookingSlots($conn) {
         $grouped[$date] = [];
       }
       $grouped[$date][] = [
+        "id" => $slot['id'],
         "time" => $slot['time'],
         "available" => $slot['availability'] == 1 ? true : false
       ];
