@@ -267,7 +267,9 @@
           success: function (response) {
             if (response.success) {
               alert("Booking successful!");
-              window.location.reload();
+              window.location.href =
+                "booking-confirmation.html?booking_number=" +
+                response.booking_number;
             } else {
               alert("Booking failed: " + response.message);
             }

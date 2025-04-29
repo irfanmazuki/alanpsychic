@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Booking Confirmation</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background-color: #81d8d0;
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+      .confirmation {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        width: 100%;
+        text-align: center;
+      }
+      h2 {
+        color: #0abab5;
+        margin-bottom: 20px;
+      }
+      p {
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="confirmation" id="confirmationContent">
+      <h2>Loading booking details...</h2>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script>
+      function getBookingNumberFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("booking_number");
+      }
+
+      $(document).ready(function () {
+        const bookingNumber = getBookingNumberFromUrl();
+        if (!bookingNumber) {
+          $("#confirmationContent").html(
+            "<h2>Invalid Access</h2><p>No booking number provided.</p>"
+          );
+          return;
+        }
+
+        $.ajax({
+          url:
+            "api/api.php?action=get_booking_details&booking_number=" +
+            bookingNumber,
+          method: "GET",
+          success: function (response) {
+            if (response.success) {
+              const booking = response.booking;
+              $("#confirmationContent").html(`
+          <h2>Booking Confirmed!</h2>
+          <p><strong>Booking Number:</strong> ${bookingNumber}</p>
+          <p><strong>Name:</strong> ${booking.name}</p>
+          <p><strong>Phone:</strong> +60${booking.phone_number}</p>
+          <p><strong>Email:</strong> ${booking.email}</p>
+          <p><strong>Pax:</strong> ${booking.pax_number}</p>
+          <p><strong>Date:</strong> ${booking.date}</p>
+          <p><strong>Timeslots:</strong> ${booking.timeslots.join(", ")}</p>
+          <br>
+          <a href="index.html" class="btn btn-primary">Return to Home</a>
+        `);
+            } else {
+              $("#confirmationContent").html(
+                `<h2>Error</h2><p>${response.message}</p>`
+              );
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("Error fetching booking:", error);
+            $("#confirmationContent").html(
+              "<h2>Error loading booking details.</h2>"
+            );
+          },
+        });
+      });
+    </script>
+  </body>
+</html>

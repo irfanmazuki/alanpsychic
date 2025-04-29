@@ -33,6 +33,9 @@ switch ($action) {
     case 'submit_booking':
         submitBooking($conn);
         break;
+    case 'get_booking_details':
+        getBookingDetails($conn);
+        break;
     default:
         echo json_encode(["error" => "No valid action provided."]);
         break;
@@ -152,6 +155,7 @@ function getBookingSlots($conn) {
   }
 
   function submitBooking($conn) {
+    $bookingNumber = generateBookingNumber();
     $name = $_POST['name'] ?? '';
     $phone = $_POST['phone'] ?? '';
     $email = $_POST['email'] ?? '';
@@ -177,8 +181,8 @@ function getBookingSlots($conn) {
   
       // Insert into booking
       $createdDate = date('Y-m-d H:i:s');
-      $stmt = $conn->prepare("INSERT INTO booking (name, phone_number, email, pax_number, created_date, isCancelled) VALUES (?, ?, ?, ?, ?, 0)");
-      $stmt->bind_param("sssis", $name, $phone, $email, $pax, $createdDate);
+      $stmt = $conn->prepare("INSERT INTO booking (name, phone_number, email, pax_number, created_date, isCancelled, booking_number) VALUES (?, ?, ?, ?, ?, 0, ?)");
+      $stmt->bind_param("sssiss", $name, $phone, $email, $pax, $createdDate, $bookingNumber);
       $stmt->execute();
       $bookingId = $stmt->insert_id;
   
@@ -196,12 +200,65 @@ function getBookingSlots($conn) {
       }
   
       $conn->commit();
-      echo json_encode(["success" => true]);
+      echo json_encode(["success" => true, "booking_number" => $bookingNumber]);
     } catch (Exception $e) {
       $conn->rollback();
       echo json_encode(["success" => false, "message" => $e->getMessage()]);
     }
   }
+
+  function getBookingDetails($conn) {
+    $bookingNumber = $_GET['booking_number'] ?? '';
   
+    if (!$bookingNumber) {
+      echo json_encode(["success" => false, "message" => "Booking number missing."]);
+      return;
+    }
+  
+    // Fetch booking main info
+    $stmt = $conn->prepare("SELECT id, name, phone_number, email, pax_number, created_date FROM booking WHERE booking_number = ?");
+    $stmt->bind_param("s", $bookingNumber);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows == 0) {
+      echo json_encode(["success" => false, "message" => "Booking not found."]);
+      return;
+    }
+    $booking = $result->fetch_assoc();
+  
+    // Fetch booked timeslots
+    $stmt2 = $conn->prepare("
+      SELECT t.date, t.time
+      FROM booking_slot bs
+      JOIN timeslots t ON t.id = bs.timeslot_id
+      WHERE bs.booking_id = ?
+      ORDER BY t.date, t.time
+    ");
+    $stmt2->bind_param("i", $booking['id']);
+    $stmt2->execute();
+    $result2 = $stmt2->get_result();
+  
+    $timeslots = [];
+    while ($row = $result2->fetch_assoc()) {
+        $time24 = date('g:i A', strtotime($row['time']));
+        $timeslots[] = $time24; // Only time needed
+        $booking['date'] = $row['date']; // Date (all same date assumed for now)
+    }
+  
+    $booking['timeslots'] = $timeslots;
+  
+    echo json_encode(["success" => true, "booking" => $booking]);
+  }
+  
+  
+  function generateBookingNumber($length = 6) {
+    $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    $charactersLength = strlen($characters);
+    $randomString = '';
+    for ($i = 0; $i < $length; $i++) {
+      $randomString .= $characters[rand(0, $charactersLength - 1)];
+    }
+    return $randomString;
+  }
   
 ?>
