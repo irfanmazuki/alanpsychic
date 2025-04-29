@@ -23,7 +23,13 @@ switch ($action) {
         break;
     case 'get_booking_slots':
         getBookingSlots($conn);
-        break;      
+        break;  
+    case 'add_slots':
+        addSlots($conn);
+        break;  
+    case 'delete_slot':
+        deleteSlot($conn);
+        break;  
     default:
         echo json_encode(["error" => "No valid action provided."]);
         break;
@@ -87,6 +93,58 @@ function getBookingSlots($conn) {
     }
   
     echo json_encode($slotsData);
+  }
+  
+  function addSlots($conn) {
+    $fromDate = isset($_POST['from']) ? $_POST['from'] : null;
+    $toDate = isset($_POST['to']) ? $_POST['to'] : null;
+  
+    if (!$fromDate || !$toDate) {
+      echo json_encode(["success" => false, "message" => "Missing dates."]);
+      return;
+    }
+  
+    $from = new DateTime($fromDate);
+    $from->modify('+1 day'); // Start from next day after latest filled
+    $to = new DateTime($toDate);
+  
+    $times = ['12:00:00', '13:00:00', '14:00:00', '15:00:00', '16:00:00', '17:00:00'];
+    $createdDate = date('Y-m-d H:i:s');
+  
+    $conn->begin_transaction();
+    try {
+      while ($from <= $to) {
+        foreach ($times as $time) {
+          $stmt = $conn->prepare("INSERT INTO timeslots (date, time, created_date, availability) VALUES (?, ?, ?, 1)");
+          $dateString = $from->format('Y-m-d');
+          $stmt->bind_param("sss", $dateString, $time, $createdDate);
+          $stmt->execute();
+        }
+        $from->modify('+1 day');
+      }
+      $conn->commit();
+      echo json_encode(["success" => true]);
+    } catch (Exception $e) {
+      $conn->rollback();
+      echo json_encode(["success" => false, "message" => $e->getMessage()]);
+    }
+  }
+
+  function deleteSlot($conn) {
+    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+    if ($id <= 0) {
+      echo json_encode(["success" => false, "message" => "Invalid ID."]);
+      return;
+    }
+  
+    $stmt = $conn->prepare("DELETE FROM timeslots WHERE id = ?");
+    $stmt->bind_param("i", $id);
+  
+    if ($stmt->execute()) {
+      echo json_encode(["success" => true]);
+    } else {
+      echo json_encode(["success" => false, "message" => $stmt->error]);
+    }
   }
   
 ?>

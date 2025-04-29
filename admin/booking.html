@@ -41,6 +41,21 @@
       <label for="filterDate">Filter by Date: </label>
       <input type="date" id="filterDate" />
     </div>
+    <div class="mb-4 text-center">
+      <p>
+        <strong>Slots currently filled until:</strong>
+        <span id="latestDate">Loading...</span>
+      </p>
+      <div class="d-flex justify-content-center align-items-center gap-2 mt-3">
+        <input
+          type="date"
+          id="addUntilDate"
+          class="form-control"
+          style="max-width: 200px"
+        />
+        <button class="btn btn-primary" onclick="addSlots()">Add Slots</button>
+      </div>
+    </div>
 
     <div class="table-responsive">
       <table id="slotsTable" class="table table-bordered text-center">
@@ -49,6 +64,7 @@
             <th>Date</th>
             <th>Time</th>
             <th>Availability</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -80,8 +96,8 @@
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
     <script>
       var slotsData = [];
-
-      var table; // move this to global scope
+      var latestFilledDate = null;
+      var table;
 
       function loadSlots() {
         $.ajax({
@@ -92,16 +108,105 @@
             populateTable();
 
             if ($.fn.DataTable.isDataTable("#slotsTable")) {
-              table.destroy(); // destroy previous table instance first
+              table.destroy();
             }
 
             table = $("#slotsTable").DataTable({
               pageLength: 12,
               lengthChange: false,
             });
+
+            if (slotsData.length > 0) {
+              latestFilledDate = slotsData[slotsData.length - 1].date;
+              $("#latestDate").text(latestFilledDate);
+            } else {
+              $("#latestDate").text("No slots available yet.");
+            }
+
+            if (slotsData.length > 0) {
+              latestFilledDate = slotsData[slotsData.length - 1].date;
+              $("#latestDate").text(latestFilledDate);
+
+              // Set minimum date for the picker
+              const minDate = new Date(latestFilledDate);
+              minDate.setDate(minDate.getDate() + 1); // +1 day
+              $("#addUntilDate").attr(
+                "min",
+                minDate.toISOString().split("T")[0]
+              );
+              $("#addUntilDate").val("");
+            } else {
+              $("#latestDate").text("No slots available yet.");
+            }
           },
           error: function (xhr, status, error) {
             console.error("AJAX Error:", error);
+          },
+        });
+      }
+
+      function addSlots() {
+        const untilDate = $("#addUntilDate").val();
+        if (!untilDate) {
+          alert("Please select a date to add slots until.");
+          return;
+        }
+        if (!latestFilledDate) {
+          alert(
+            "Cannot determine the latest filled date. Please refresh the page."
+          );
+          return;
+        }
+        if (untilDate <= latestFilledDate) {
+          alert("The new date must be later than the latest filled date!");
+          return;
+        }
+
+        if (
+          !confirm(`Add slots from ${latestFilledDate} until ${untilDate}?`)
+        ) {
+          return;
+        }
+
+        $.ajax({
+          url: "../api/api.php?action=add_slots",
+          method: "POST",
+          data: { from: latestFilledDate, to: untilDate },
+          success: function (response) {
+            if (response.success) {
+              alert("Slots successfully added!");
+              loadSlots(); // reload after add
+            } else {
+              alert("Failed to add slots: " + response.message);
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Error occurred while adding slots.");
+          },
+        });
+      }
+
+      function deleteSlot(id) {
+        if (!confirm("Are you sure you want to delete this slot?")) {
+          return;
+        }
+
+        $.ajax({
+          url: "../api/api.php?action=delete_slot",
+          method: "POST",
+          data: { id: id },
+          success: function (response) {
+            if (response.success) {
+              alert("Slot deleted successfully!");
+              loadSlots(); // reload after delete
+            } else {
+              alert("Failed to delete slot: " + response.message);
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Error occurred while deleting slot.");
           },
         });
       }
@@ -122,18 +227,23 @@
           }
 
           const row = `
-        <tr class="${stripeClass}">
-          <td>${slot.date}</td>
-          <td>${slot.time}</td>
-          <td>
-            ${
-              slot.availability == 1
-                ? "Available"
-                : `<button class="btn btn-info btn-sm" onclick="openModal(${slot.id})">View</button>`
-            }
-          </td>
-        </tr>
-      `;
+<tr class="${stripeClass}">
+  <td>${slot.date}</td>
+  <td>${slot.time}</td>
+  <td>
+    ${
+      slot.availability == 1
+        ? "Available"
+        : `<button class="btn btn-info btn-sm" onclick="openModal(${slot.id})">View Booking</button>`
+    }
+  </td>
+  <td>
+    <button class="btn btn-danger btn-sm" onclick="deleteSlot(${
+      slot.id
+    })">Delete</button>
+  </td>
+</tr>
+`;
           tbody.append(row);
         });
       }
