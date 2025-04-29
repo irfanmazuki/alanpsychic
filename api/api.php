@@ -356,16 +356,13 @@ function getBookingSlots($conn) {
         b.name,
         b.created_date,
         b.isCancelled,
-        u.isBlacklisted,
-        MAX(t.date) AS latest_date
+        MAX(t.date) AS date
       FROM 
         booking b
-      JOIN 
-        users u ON b.user_id = u.id
       LEFT JOIN 
         booking_slot bs ON bs.booking_id = b.id
       LEFT JOIN 
-        timeslots t ON bs.timeslot_id = t.id
+        timeslots t ON t.id = bs.timeslot_id
       GROUP BY 
         b.id
       ORDER BY 
@@ -379,33 +376,26 @@ function getBookingSlots($conn) {
     while ($row = $result->fetch_assoc()) {
       $bookingId = $row['booking_id'];
   
-      // Get all timeslots for this booking
+      // 🆕 Now get timeslots for each booking
       $timeslotQuery = "
-        SELECT date, time 
-        FROM timeslots 
-        WHERE id IN (
-          SELECT timeslot_id FROM booking_slot WHERE booking_id = $bookingId
-        )
-        ORDER BY date, time
+        SELECT time
+        FROM timeslots
+        WHERE id IN (SELECT timeslot_id FROM booking_slot WHERE booking_id = $bookingId)
+        ORDER BY time ASC
       ";
-      $tsResult = $conn->query($timeslotQuery);
+      $timeslotResult = $conn->query($timeslotQuery);
       $timeslots = [];
-  
-      while ($ts = $tsResult->fetch_assoc()) {
-        $timeslots[] = [
-          "date" => $ts['date'],
-          "time" => date("g:i A", strtotime($ts['time']))
-        ];
+      while ($ts = $timeslotResult->fetch_assoc()) {
+        $timeslots[] = date("g:i A", strtotime($ts['time'])); // format nicely
       }
   
       $bookings[] = [
         "booking_number" => $row["booking_number"],
         "name" => $row["name"],
-        "status" => $row["isCancelled"] == 1 ? "Cancelled" : "Booked",
         "created_date" => $row["created_date"],
-        "date" => $row["latest_date"] ?? "-",
-        "timeslots" => $timeslots,
-        "isBlacklisted" => $row["isBlacklisted"]
+        "date" => $row["date"] ?? "-",
+        "status" => $row["isCancelled"] == 1 ? "Cancelled" : "Booked",
+        "timeslots" => $timeslots
       ];
     }
   
