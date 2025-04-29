@@ -42,6 +42,9 @@ switch ($action) {
     case 'get_recent_bookings':
         getRecentBookings($conn);
         break;
+    case 'get_users_list':
+        getUsersList($conn);
+        break;     
     default:
         echo json_encode(["error" => "No valid action provided."]);
         break;
@@ -392,7 +395,78 @@ function getBookingSlots($conn) {
     echo json_encode(["success" => true, "bookings" => $bookings]);
   }
   
+  function getUsersList($conn) {
+    $sql = "SELECT * FROM users ORDER BY id ASC";
+    $result = $conn->query($sql);
+    $users = [];
   
+    while ($row = $result->fetch_assoc()) {
+      $userId = $row['id'];
+  
+      // Get all bookings for this user
+      $bookingSql = "
+        SELECT 
+          b.id AS booking_id,
+          b.booking_number,
+          b.isCancelled,
+          b.created_date
+        FROM 
+          booking b
+        WHERE 
+          b.user_id = $userId
+        ORDER BY 
+          b.created_date DESC
+      ";
+      $bookingResult = $conn->query($bookingSql);
+      $bookings = [];
+  
+      while ($bookingRow = $bookingResult->fetch_assoc()) {
+        $bookingId = $bookingRow['booking_id'];
+  
+        // 🆕 Get all timeslots under this booking
+        $timeslotSql = "
+          SELECT 
+            t.date,
+            t.time
+          FROM 
+            booking_slot bs
+          JOIN 
+            timeslots t ON bs.timeslot_id = t.id
+          WHERE 
+            bs.booking_id = $bookingId
+          ORDER BY 
+            t.date, t.time
+        ";
+        $timeslotResult = $conn->query($timeslotSql);
+        $timeslots = [];
+  
+        while ($ts = $timeslotResult->fetch_assoc()) {
+          $timeslots[] = [
+            "date" => $ts["date"],
+            "time" => date("g:i A", strtotime($ts["time"]))
+          ];
+        }
+  
+        $bookings[] = [
+          "booking_number" => $bookingRow['booking_number'],
+          "status" => $bookingRow['isCancelled'] == 1 ? "Cancelled" : "Booked",
+          "created_date" => $bookingRow['created_date'],
+          "timeslots" => $timeslots
+        ];
+      }
+  
+      $users[] = [
+        "id" => $row['id'],
+        "phone_number" => $row['phone_number'],
+        "name" => $row['name'],
+        "email" => $row['email'],
+        "isBlacklisted" => $row['isBlacklisted'],
+        "bookings" => $bookings
+      ];
+    }
+  
+    echo json_encode(["success" => true, "users" => $users]);
+  }
 
   function generateBookingNumber($length = 6) {
     $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';

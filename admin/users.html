@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Users List - Admin</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css"
+    />
+    <style>
+      body {
+        background: #f4f8f9;
+        padding: 20px;
+      }
+      h1 {
+        text-align: center;
+        color: #0abab5;
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Users & Bookings</h1>
+
+    <div class="table-responsive">
+      <table
+        id="usersTable"
+        class="table table-striped table-bordered"
+        style="width: 100%"
+      >
+        <thead class="table-primary">
+          <tr>
+            <th>User ID</th>
+            <th>Phone Number</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Blacklisted</th>
+            <th>Bookings</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- User Booking Modal -->
+    <div class="modal fade" id="userBookingModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">User Bookings</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div id="bookingDetails"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+      $(document).ready(function () {
+        loadUsers();
+      });
+
+      function loadUsers() {
+        $.ajax({
+          url: "../api/api.php?action=get_users_list",
+          method: "GET",
+          success: function (response) {
+            if (response.success) {
+              const users = response.users;
+              const tbody = $("#usersTable tbody");
+              tbody.empty();
+
+              users.forEach((user) => {
+                tbody.append(`
+                    <tr>
+                    <td>${user.id}</td>
+                    <td>+60${user.phone_number}</td>
+                    <td>${user.name}</td>
+                    <td>${user.email}</td>
+                    <td>${user.isBlacklisted == 1 ? "Yes" : "No"}</td>
+                    <td>
+                        <button class="btn btn-info btn-sm" onclick='viewUserBookings(${JSON.stringify(
+                          user.bookings
+                        )})'>
+                        View Bookings (${user.bookings.length})
+                        </button>
+                    </td>
+                    </tr>
+                `);
+              });
+
+              if ($.fn.DataTable.isDataTable("#usersTable")) {
+                $("#usersTable").DataTable().destroy();
+              }
+
+              $("#usersTable").DataTable({
+                pageLength: 10,
+                order: [[0, "asc"]],
+                scrollX: true,
+              });
+            } else {
+              alert("Failed to load users.");
+            }
+          },
+          error: function (err) {
+            console.error("Users Load Error:", err);
+            alert("Error loading users.");
+          },
+        });
+      }
+
+      function viewUserBookings(bookings) {
+        let html = "";
+
+        if (bookings.length > 0) {
+          html = `
+      <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+          <tr>
+            <th>Booking Number</th>
+            <th>Status</th>
+            <th>Booked Date</th>
+            <th>Date</th> <!-- 🆕 Separate Date Column -->
+            <th>Timeslot(s)</th> <!-- 🆕 Separate Timeslot Column -->
+          </tr>
+        </thead>
+        <tbody>
+          ${bookings
+            .map((b) => {
+              if (b.timeslots.length > 0) {
+                return b.timeslots
+                  .map(
+                    (ts, index) => `
+                <tr>
+                  ${
+                    index === 0
+                      ? `
+                    <td rowspan="${b.timeslots.length}">${b.booking_number}</td>
+                    <td rowspan="${b.timeslots.length}" style="color: ${
+                          b.status === "Booked" ? "green" : "red"
+                        };">${b.status}</td>
+                    <td rowspan="${b.timeslots.length}">${b.created_date}</td>
+                  `
+                      : ""
+                  }
+                  <td>${ts.date}</td>
+                  <td>${ts.time}</td>
+                </tr>
+              `
+                  )
+                  .join("");
+              } else {
+                return `
+                <tr>
+                  <td>${b.booking_number}</td>
+                  <td style="color: ${
+                    b.status === "Booked" ? "green" : "red"
+                  };">${b.status}</td>
+                  <td>${b.created_date}</td>
+                  <td>-</td>
+                  <td>-</td>
+                </tr>
+              `;
+              }
+            })
+            .join("")}
+        </tbody>
+      </table>
+    `;
+        } else {
+          html = `<p>This user has no bookings yet.</p>`;
+        }
+
+        $("#bookingDetails").html(html);
+
+        const modal = new bootstrap.Modal(
+          document.getElementById("userBookingModal")
+        );
+        modal.show();
+      }
+    </script>
+  </body>
+</html>
