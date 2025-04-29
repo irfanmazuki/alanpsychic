@@ -280,12 +280,19 @@
             stripeClass =
               stripeClass === "table-light" ? "table-secondary" : "table-light"; // toggle between two styles
           }
-
+          console.log(slot);
           const row = `
             <tr class="${stripeClass}">
             <td>${slot.date}</td>
             <td>${slot.time}</td>
-            <td>${slot.booking_number ? slot.booking_number : "-"}</td>
+            <td>
+                ${slot.booking_number ? slot.booking_number : "-"}
+                ${
+                  slot.isBlacklisted == 1
+                    ? ' <span title="Blacklisted user" style="color: red;">⚠️</span>'
+                    : ""
+                }
+            </td>
             <td>
                 ${slot.availability == 1 ? "Available" : "Booked"}
             </td>

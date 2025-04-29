@@ -62,21 +62,24 @@ function getTimeslots($conn) {
             t.date,
             t.time,
             t.availability,
-            MAX(b.booking_number) AS booking_number
+            b.booking_number,
+            u.isBlacklisted
         FROM 
             timeslots t
-        LEFT JOIN 
-            booking_slot bs ON bs.timeslot_id = t.id
-        LEFT JOIN 
-            booking b ON bs.booking_id = b.id AND b.isCancelled = 0
+        LEFT JOIN (
+            SELECT bs.timeslot_id, b.booking_number, b.user_id
+            FROM booking_slot bs
+            JOIN booking b ON bs.booking_id = b.id
+            WHERE b.isCancelled = 0
+            GROUP BY bs.timeslot_id  -- ensures only one booking per timeslot
+        ) AS b ON b.timeslot_id = t.id
+        LEFT JOIN users u ON b.user_id = u.id
         WHERE 
             t.date >= CURDATE()
-        GROUP BY 
-            t.id, t.date, t.time, t.availability
         ORDER BY 
             t.date ASC, t.time ASC
-
-        ";
+    ";
+  
   
     $result = $conn->query($sql);
     $timeslots = [];
@@ -87,7 +90,8 @@ function getTimeslots($conn) {
         "date" => $row['date'],
         "time" => date("g:i A", strtotime($row['time'])), // Optional: format to 12-hour
         "availability" => $row['availability'],
-        "booking_number" => $row['booking_number'] ?? null
+        "booking_number" => $row['booking_number'] ?? null,
+        "isBlacklisted" => $row['isBlacklisted']
       ];
     }
   
@@ -352,13 +356,16 @@ function getBookingSlots($conn) {
         b.name,
         b.created_date,
         b.isCancelled,
-        MAX(t.date) AS date
+        u.isBlacklisted,
+        MAX(t.date) AS latest_date
       FROM 
         booking b
+      JOIN 
+        users u ON b.user_id = u.id
       LEFT JOIN 
         booking_slot bs ON bs.booking_id = b.id
       LEFT JOIN 
-        timeslots t ON t.id = bs.timeslot_id
+        timeslots t ON bs.timeslot_id = t.id
       GROUP BY 
         b.id
       ORDER BY 
@@ -372,26 +379,33 @@ function getBookingSlots($conn) {
     while ($row = $result->fetch_assoc()) {
       $bookingId = $row['booking_id'];
   
-      // 🆕 Now get timeslots for each booking
+      // Get all timeslots for this booking
       $timeslotQuery = "
-        SELECT time
-        FROM timeslots
-        WHERE id IN (SELECT timeslot_id FROM booking_slot WHERE booking_id = $bookingId)
-        ORDER BY time ASC
+        SELECT date, time 
+        FROM timeslots 
+        WHERE id IN (
+          SELECT timeslot_id FROM booking_slot WHERE booking_id = $bookingId
+        )
+        ORDER BY date, time
       ";
-      $timeslotResult = $conn->query($timeslotQuery);
+      $tsResult = $conn->query($timeslotQuery);
       $timeslots = [];
-      while ($ts = $timeslotResult->fetch_assoc()) {
-        $timeslots[] = date("g:i A", strtotime($ts['time'])); // format nicely
+  
+      while ($ts = $tsResult->fetch_assoc()) {
+        $timeslots[] = [
+          "date" => $ts['date'],
+          "time" => date("g:i A", strtotime($ts['time']))
+        ];
       }
   
       $bookings[] = [
         "booking_number" => $row["booking_number"],
         "name" => $row["name"],
-        "created_date" => $row["created_date"],
-        "date" => $row["date"] ?? "-",
         "status" => $row["isCancelled"] == 1 ? "Cancelled" : "Booked",
-        "timeslots" => $timeslots
+        "created_date" => $row["created_date"],
+        "date" => $row["latest_date"] ?? "-",
+        "timeslots" => $timeslots,
+        "isBlacklisted" => $row["isBlacklisted"]
       ];
     }
   
