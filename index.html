@@ -110,6 +110,27 @@
           Submit
         </button>
       </div>
+      <div style="margin-top: 30px">
+        <input
+          type="text"
+          id="bookingSearchInput"
+          placeholder="Enter your Booking Number"
+          style="
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+          "
+        />
+        <button
+          class="make-appointment"
+          style="margin-top: 10px; background-color: #666"
+          onclick="searchBooking()"
+        >
+          Search Booking
+        </button>
+      </div>
     </div>
 
     <script>
@@ -126,6 +147,19 @@
         } else {
           alert("Incorrect password. Please try again.");
         }
+      }
+
+      function searchBooking() {
+        const bookingNumber = document
+          .getElementById("bookingSearchInput")
+          .value.trim();
+        if (!bookingNumber) {
+          alert("Please enter a booking number.");
+          return;
+        }
+
+        // Redirect with booking number
+        window.location.href = `booking-confirmation.html?booking_number=${bookingNumber}`;
       }
     </script>
   </body>

@@ -65,18 +65,37 @@
           success: function (response) {
             if (response.success) {
               const booking = response.booking;
-              $("#confirmationContent").html(`
-          <h2>Booking Confirmed!</h2>
-          <p><strong>Booking Number:</strong> ${bookingNumber}</p>
-          <p><strong>Name:</strong> ${booking.name}</p>
-          <p><strong>Phone:</strong> +60${booking.phone_number}</p>
-          <p><strong>Email:</strong> ${booking.email}</p>
-          <p><strong>Pax:</strong> ${booking.pax_number}</p>
-          <p><strong>Date:</strong> ${booking.date}</p>
-          <p><strong>Timeslots:</strong> ${booking.timeslots.join(", ")}</p>
-          <br>
-          <a href="index.html" class="btn btn-primary">Return to Home</a>
-        `);
+
+              if (booking.isCancelled == 1) {
+                $("#confirmationContent").html(`
+      <h2 style="color:red;">Booking Cancelled</h2>
+      <p>Your booking number <strong>${bookingNumber}</strong> has been cancelled.</p>
+      <br>
+      <a href="index.html" class="btn btn-primary">Return to Home</a>
+    `);
+              } else {
+                $("#confirmationContent").html(`
+      <h2>Booking Confirmed!</h2>
+      <p><strong>Booking Number:</strong> ${bookingNumber}</p>
+      <p><strong>Name:</strong> ${booking.name}</p>
+      <p><strong>Phone:</strong> +60${booking.phone_number}</p>
+      <p><strong>Email:</strong> ${booking.email}</p>
+      <p><strong>Pax:</strong> ${booking.pax_number}</p>
+      <p><strong>Date:</strong> ${booking.date}</p>
+      <p><strong>Timeslots:</strong> ${booking.timeslots.join(", ")}</p>
+
+      <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404;">
+        <strong>Important:</strong><br>
+        Please arrive at least <strong>15 minutes before</strong> your booking time.<br>
+        If you wish to cancel, <strong>please cancel at least 1 day before</strong> to avoid getting blacklisted.
+      </div>
+
+      <br>
+      <button class="btn btn-danger" onclick="cancelBooking('${bookingNumber}')">Cancel Booking</button>
+      <br><br>
+      <a href="index.html" class="btn btn-primary">Return to Home</a>
+    `);
+              }
             } else {
               $("#confirmationContent").html(
                 `<h2>Error</h2><p>${response.message}</p>`
@@ -91,6 +110,34 @@
           },
         });
       });
+
+      function cancelBooking(bookingNumber) {
+        if (
+          !confirm(
+            "Are you sure you want to cancel your booking? This action cannot be undone."
+          )
+        ) {
+          return;
+        }
+
+        $.ajax({
+          url: "api/api.php?action=cancel_booking",
+          method: "POST",
+          data: { booking_number: bookingNumber },
+          success: function (response) {
+            if (response.success) {
+              alert("Your booking has been successfully cancelled.");
+              window.location.href = "index.html"; // Back to home after cancel
+            } else {
+              alert("Failed to cancel booking: " + response.message);
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Error occurred while cancelling booking.");
+          },
+        });
+      }
     </script>
   </body>
 </html>

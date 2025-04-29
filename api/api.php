@@ -36,6 +36,9 @@ switch ($action) {
     case 'get_booking_details':
         getBookingDetails($conn);
         break;
+    case 'cancel_booking':
+        cancelBooking($conn);
+        break;
     default:
         echo json_encode(["error" => "No valid action provided."]);
         break;
@@ -216,7 +219,7 @@ function getBookingSlots($conn) {
     }
   
     // Fetch booking main info
-    $stmt = $conn->prepare("SELECT id, name, phone_number, email, pax_number, created_date FROM booking WHERE booking_number = ?");
+    $stmt = $conn->prepare("SELECT id, name, phone_number, email, pax_number, created_date, isCancelled FROM booking WHERE booking_number = ?");
     $stmt->bind_param("s", $bookingNumber);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -248,6 +251,54 @@ function getBookingSlots($conn) {
     $booking['timeslots'] = $timeslots;
   
     echo json_encode(["success" => true, "booking" => $booking]);
+  }
+  
+  function cancelBooking($conn) {
+    $bookingNumber = $_POST['booking_number'] ?? '';
+  
+    if (!$bookingNumber) {
+      echo json_encode(["success" => false, "message" => "Booking number missing."]);
+      return;
+    }
+  
+    // Find the booking id
+    $stmt = $conn->prepare("SELECT id FROM booking WHERE booking_number = ? AND isCancelled = 0");
+    $stmt->bind_param("s", $bookingNumber);
+    $stmt->execute();
+    $result = $stmt->get_result();
+  
+    if ($result->num_rows == 0) {
+      echo json_encode(["success" => false, "message" => "Booking not found or already cancelled."]);
+      return;
+    }
+  
+    $booking = $result->fetch_assoc();
+    $bookingId = $booking['id'];
+  
+    $conn->begin_transaction();
+    try {
+      // 1. Set booking as cancelled
+      $stmt1 = $conn->prepare("UPDATE booking SET isCancelled = 1 WHERE id = ?");
+      $stmt1->bind_param("i", $bookingId);
+      $stmt1->execute();
+  
+      // 2. Find all linked timeslots and mark them available again
+      $stmt2 = $conn->prepare("
+        UPDATE timeslots
+        SET availability = 1
+        WHERE id IN (
+          SELECT timeslot_id FROM booking_slot WHERE booking_id = ?
+        )
+      ");
+      $stmt2->bind_param("i", $bookingId);
+      $stmt2->execute();
+  
+      $conn->commit();
+      echo json_encode(["success" => true]);
+    } catch (Exception $e) {
+      $conn->rollback();
+      echo json_encode(["success" => false, "message" => $e->getMessage()]);
+    }
   }
   
   
