@@ -32,11 +32,18 @@
         text-align: center;
         margin-bottom: 20px;
       }
+
+      table.dataTable {
+        width: 100% !important;
+      }
+
+      .modal-body {
+        overflow-x: auto;
+      }
     </style>
   </head>
   <body>
     <h1>Booking Slot Management</h1>
-
     <div class="filter">
       <label for="filterDate">Filter by Date: </label>
       <input type="date" id="filterDate" />
@@ -54,6 +61,10 @@
           style="max-width: 200px"
         />
         <button class="btn btn-primary" onclick="addSlots()">Add Slots</button>
+        <!-- Notification Button -->
+        <button class="btn btn-warning" onclick="openNotificationModal()">
+          History
+        </button>
       </div>
     </div>
 
@@ -87,6 +98,44 @@
             ></button>
           </div>
           <div class="modal-body" id="modalDetails"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div class="modal fade" id="notificationModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Recent Booking Activities</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div style="overflow-x: auto; width: 100%">
+              <table
+                id="notificationTable"
+                class="table table-striped table-bordered display nowrap"
+                style="width: 100%"
+              >
+                <thead class="table-dark">
+                  <tr>
+                    <th>Booking No</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Timeslots</th>
+                    <th>Created At</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -324,6 +373,56 @@
           error: function (xhr, status, error) {
             console.error("AJAX Error:", error);
             alert("Error occurred while cancelling booking.");
+          },
+        });
+      }
+
+      function openNotificationModal() {
+        $.ajax({
+          url: "../api/api.php?action=get_recent_bookings",
+          method: "GET",
+          success: function (response) {
+            if (response.success) {
+              const data = response.bookings;
+              const tbody = $("#notificationTable tbody");
+              tbody.empty();
+              data.forEach((item) => {
+                tbody.append(`
+                    <tr>
+                    <td>${item.booking_number}</td>
+                    <td>${item.name}</td>
+                    <td>${item.status}</td>
+                    <td>${item.date}</td>
+                    <td>${
+                      item.timeslots.length > 0
+                        ? item.timeslots.join(", ")
+                        : "-"
+                    }</td> <!-- 🆕 Timeslots -->
+                    <td>${item.created_date}</td>
+                    </tr>
+                `);
+              });
+
+              if ($.fn.DataTable.isDataTable("#notificationTable")) {
+                $("#notificationTable").DataTable().destroy();
+              }
+
+              $("#notificationTable").DataTable({
+                pageLength: 10,
+                order: [[5, "asc"]], // Sort by created date
+              });
+
+              const modal = new bootstrap.Modal(
+                document.getElementById("notificationModal")
+              );
+              modal.show();
+            } else {
+              alert("Failed to load notifications.");
+            }
+          },
+          error: function (err) {
+            console.error("Notification load error:", err);
+            alert("Something went wrong loading notifications.");
           },
         });
       }

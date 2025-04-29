@@ -39,6 +39,9 @@ switch ($action) {
     case 'cancel_booking':
         cancelBooking($conn);
         break;
+    case 'get_recent_bookings':
+        getRecentBookings($conn);
+        break;
     default:
         echo json_encode(["error" => "No valid action provided."]);
         break;
@@ -322,7 +325,62 @@ function getBookingSlots($conn) {
     }
   }
   
+  function getRecentBookings($conn) {
+    $sql = "
+      SELECT 
+        b.id AS booking_id,
+        b.booking_number,
+        b.name,
+        b.created_date,
+        b.isCancelled,
+        MAX(t.date) AS date
+      FROM 
+        booking b
+      LEFT JOIN 
+        booking_slot bs ON bs.booking_id = b.id
+      LEFT JOIN 
+        timeslots t ON t.id = bs.timeslot_id
+      GROUP BY 
+        b.id
+      ORDER BY 
+        b.created_date DESC
+      LIMIT 50
+    ";
   
+    $result = $conn->query($sql);
+    $bookings = [];
+  
+    while ($row = $result->fetch_assoc()) {
+      $bookingId = $row['booking_id'];
+  
+      // 🆕 Now get timeslots for each booking
+      $timeslotQuery = "
+        SELECT time
+        FROM timeslots
+        WHERE id IN (SELECT timeslot_id FROM booking_slot WHERE booking_id = $bookingId)
+        ORDER BY time ASC
+      ";
+      $timeslotResult = $conn->query($timeslotQuery);
+      $timeslots = [];
+      while ($ts = $timeslotResult->fetch_assoc()) {
+        $timeslots[] = date("g:i A", strtotime($ts['time'])); // format nicely
+      }
+  
+      $bookings[] = [
+        "booking_number" => $row["booking_number"],
+        "name" => $row["name"],
+        "created_date" => $row["created_date"],
+        "date" => $row["date"] ?? "-",
+        "status" => $row["isCancelled"] == 1 ? "Cancelled" : "Booked",
+        "timeslots" => $timeslots
+      ];
+    }
+  
+    echo json_encode(["success" => true, "bookings" => $bookings]);
+  }
+  
+  
+
   function generateBookingNumber($length = 6) {
     $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     $charactersLength = strlen($characters);
