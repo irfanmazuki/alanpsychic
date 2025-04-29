@@ -47,23 +47,41 @@ switch ($action) {
 $conn->close();
 
 function getTimeslots($conn) {
-    $today = date('Y-m-d');
-    $sql = "SELECT id, date, time, availability FROM timeslots WHERE date > '$today' ORDER BY date ASC, time ASC";
+    $sql = "
+      SELECT 
+        t.id,
+        t.date,
+        t.time,
+        t.availability,
+        b.booking_number
+      FROM 
+        timeslots t
+      LEFT JOIN 
+        booking_slot bs ON bs.timeslot_id = t.id
+      LEFT JOIN 
+        booking b ON bs.booking_id = b.id AND b.isCancelled = 0
+      WHERE 
+        t.date >= CURDATE()
+      ORDER BY 
+        t.date ASC, t.time ASC
+    ";
+  
     $result = $conn->query($sql);
-  
     $timeslots = [];
-    if ($result->num_rows > 0) {
-      while($row = $result->fetch_assoc()) {
-        // Convert time to 12-hour format
-        $time24 = $row['time'];
-        $row['time'] = date('g:i A', strtotime($time24)); // 1:00 PM, 2:00 PM, etc.
   
-        $timeslots[] = $row;
-      }
+    while ($row = $result->fetch_assoc()) {
+      $timeslots[] = [
+        "id" => $row['id'],
+        "date" => $row['date'],
+        "time" => date("g:i A", strtotime($row['time'])), // Optional: format to 12-hour
+        "availability" => $row['availability'],
+        "booking_number" => $row['booking_number'] ?? null
+      ];
     }
   
     echo json_encode($timeslots);
-}
+  }
+  
 
 function getBookingSlots($conn) {
     $today = date('Y-m-d');
