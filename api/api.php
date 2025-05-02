@@ -48,6 +48,9 @@ switch ($action) {
     case 'toggle_blacklist':
         toggleBlacklist($conn);
         break;
+    case 'admin_login':
+      handleAdminLogin();
+      break;      
     default:
         echo json_encode(["error" => "No valid action provided."]);
         break;
@@ -137,6 +140,20 @@ function getBookingSlots($conn) {
     }
   
     echo json_encode($slotsData);
+  }
+
+  function handleAdminLogin() {
+    // Replace this with your actual hardcoded password
+    $validPassword = 'admin123';
+  
+    // Get password from POST body
+    $inputPassword = $_POST['password'] ?? '';
+  
+    if ($inputPassword === $validPassword) {
+      echo json_encode(['success' => true]);
+    } else {
+      echo json_encode(['success' => false, 'message' => 'Incorrect password.']);
+    }
   }
   
   function addSlots($conn) {

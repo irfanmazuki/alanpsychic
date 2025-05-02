@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Login</title>
+    <style>
+      body {
+        background-color: #81d8d0;
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        min-height: 100vh;
+        margin: 0;
+      }
+      .login-box {
+        background: #fff;
+        padding: 30px 20px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+      }
+      h2 {
+        text-align: center;
+        color: #0abab5;
+        margin-bottom: 20px;
+      }
+      input[type="password"],
+      button {
+        width: 100%;
+        padding: 14px;
+        margin-top: 12px;
+        font-size: 16px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+      }
+      button {
+        background-color: #0abab5;
+        color: white;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+      button:hover {
+        background-color: #089e9a;
+      }
+
+      @media (max-width: 480px) {
+        .login-box {
+          padding: 25px 15px;
+        }
+
+        input[type="password"],
+        button {
+          font-size: 15px;
+          padding: 12px;
+        }
+
+        h2 {
+          font-size: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-box">
+      <h2>Admin Login</h2>
+      <input
+        type="password"
+        id="adminPassword"
+        placeholder="Enter Admin Password"
+      />
+      <button onclick="adminLogin()">Login</button>
+    </div>
+    <script>
+      const EXPIRY_MINUTES = 30;
+
+      function adminLogin() {
+        const password = document.getElementById("adminPassword").value;
+
+        fetch("../api/api.php?action=admin_login", {
+          method: "POST",
+          body: new URLSearchParams({ password }),
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              const expiryTime =
+                new Date().getTime() + EXPIRY_MINUTES * 60 * 1000;
+              localStorage.setItem("admin_auth", "granted");
+              localStorage.setItem("admin_auth_expiry", expiryTime);
+              window.location.href = "booking.html"; // change this to your actual admin page
+            } else {
+              document.getElementById("errorMsg").innerText =
+                data.message || "Login failed";
+            }
+          });
+      }
+
+      (function checkAdminAuth() {
+        const auth = localStorage.getItem("admin_auth");
+        const expiry = parseInt(localStorage.getItem("admin_auth_expiry"), 10);
+        const now = Date.now();
+
+        if (auth === "granted" && expiry && now <= expiry) {
+          // Still valid, redirect to booking page
+          window.location.href = "booking.html";
+        } else if (expiry && now > expiry) {
+          // Expired, clean up
+          localStorage.removeItem("admin_auth");
+          localStorage.removeItem("admin_auth_expiry");
+        }
+      })();
+    </script>
+  </body>
+</html>
