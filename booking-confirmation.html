@@ -75,26 +75,26 @@
     `);
               } else {
                 $("#confirmationContent").html(`
-      <h2>Booking Confirmed!</h2>
-      <p><strong>Booking Number:</strong> ${bookingNumber}</p>
-      <p><strong>Name:</strong> ${booking.name}</p>
-      <p><strong>Phone:</strong> +60${booking.phone_number}</p>
-      <p><strong>Email:</strong> ${booking.email}</p>
-      <p><strong>Pax:</strong> ${booking.pax_number}</p>
-      <p><strong>Date:</strong> ${booking.date}</p>
-      <p><strong>Timeslots:</strong> ${booking.timeslots.join(", ")}</p>
+              <h2>Booking Confirmed!</h2>
+              <p><strong>Booking Number:</strong> ${bookingNumber}</p>
+              <p><strong>Name:</strong> ${booking.name}</p>
+              <p><strong>Phone:</strong> +${booking.phone_number}</p>
+              <p><strong>Email:</strong> ${booking.email}</p>
+              <p><strong>Pax:</strong> ${booking.pax_number}</p>
+              <p><strong>Date:</strong> ${booking.date}</p>
+              <p><strong>Timeslots:</strong> ${booking.timeslots.join(", ")}</p>
 
-      <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404;">
-        <strong>Important:</strong><br>
-        Please arrive at least <strong>15 minutes before</strong> your booking time.<br>
-        If you wish to cancel, <strong>please cancel at least 1 day before</strong> to avoid getting blacklisted.
-      </div>
+              <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404;">
+                <strong>Important:</strong><br>
+                Please arrive at least <strong>15 minutes before</strong> your booking time.<br>
+                If you wish to cancel, <strong>please cancel at least 1 day before</strong> to avoid getting blacklisted.
+              </div>
 
-      <br>
-      <button class="btn btn-danger" onclick="cancelBooking('${bookingNumber}')">Cancel Booking</button>
-      <br><br>
-      <a href="index.html" class="btn btn-primary">Return to Home</a>
-    `);
+              <br>
+              <button class="btn btn-danger" onclick="cancelBooking('${bookingNumber}')">Cancel Booking</button>
+              <br><br>
+              <a href="index.html" class="btn btn-primary">Return to Home</a>
+            `);
               }
             } else {
               $("#confirmationContent").html(

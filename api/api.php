@@ -153,6 +153,16 @@ function sendOtp($phone, $otp) {
   return ob_get_clean();
 }
 
+function sendBookingConfirmation($phone, $text) {
+  require_once 'bulk360.php'; // path to your SMS class
+
+  $sms = new bulk360();
+  ob_start(); // capture the echo output
+  $sms->sendsms($phone, $text);
+  $response = ob_get_clean();
+  return ob_get_clean();
+}
+
 function getTimeslots($conn) {
     $sql = "
         SELECT 
@@ -309,65 +319,91 @@ function getBookingSlots($conn) {
     $email = $_POST['email'] ?? '';
     $pax = intval($_POST['pax'] ?? 1);
     $timeslotIds = $_POST['timeslot_ids'] ?? [];
-  
+
     if (!$name || !$phone || !$email || empty($timeslotIds)) {
-      echo json_encode(["success" => false, "message" => "Missing booking data."]);
-      return;
+        echo json_encode(["success" => false, "message" => "Missing booking data."]);
+        return;
     }
-  
+
     $conn->begin_transaction();
     try {
-      // ✅ Step 1: Check if user exists
-      $stmtUser = $conn->prepare("SELECT id FROM users WHERE phone_number = ?");
-      $stmtUser->bind_param("s", $phone);
-      $stmtUser->execute();
-      $resultUser = $stmtUser->get_result();
-      $userId = null;
-  
-      if ($resultUser->num_rows > 0) {
-        // User exists
-        $userRow = $resultUser->fetch_assoc();
-        $userId = $userRow['id'];
-      } else {
-        // User does not exist, create new
-        $stmtNewUser = $conn->prepare("INSERT INTO users (phone_number, name, email, isBlacklisted) VALUES (?, ?, ?, 0)");
-        $stmtNewUser->bind_param("sss", $phone, $name, $email);
-        $stmtNewUser->execute();
-        $userId = $stmtNewUser->insert_id;
-      }
-  
-      // ✅ Step 2: Generate random booking number
-      $bookingNumber = generateBookingNumber();
-  
-      // ✅ Step 3: Insert into booking table
-      $stmtBooking = $conn->prepare("
-        INSERT INTO booking (user_id, name, phone_number, email, pax_number, booking_number, created_date, isCancelled)
-        VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)
-      ");
-      $stmtBooking->bind_param("isssis", $userId, $name, $phone, $email, $pax, $bookingNumber);
-      $stmtBooking->execute();
-      $bookingId = $stmtBooking->insert_id;
-  
-      // ✅ Step 4: Update selected timeslots and create booking_slot records
-      foreach ($timeslotIds as $slotId) {
-        // Update timeslot to unavailable
-        $stmtUpdateSlot = $conn->prepare("UPDATE timeslots SET availability = 0 WHERE id = ?");
-        $stmtUpdateSlot->bind_param("i", $slotId);
-        $stmtUpdateSlot->execute();
-  
-        // Link timeslot to booking
-        $stmtLinkSlot = $conn->prepare("INSERT INTO booking_slot (booking_id, timeslot_id) VALUES (?, ?)");
-        $stmtLinkSlot->bind_param("ii", $bookingId, $slotId);
-        $stmtLinkSlot->execute();
-      }
-  
-      $conn->commit();
-      echo json_encode(["success" => true, "booking_number" => $bookingNumber]);
+        // ✅ Step 1: Check if user exists
+        $stmtUser = $conn->prepare("SELECT id FROM users WHERE phone_number = ?");
+        $stmtUser->bind_param("s", $phone);
+        $stmtUser->execute();
+        $resultUser = $stmtUser->get_result();
+        $userId = null;
+
+        if ($resultUser->num_rows > 0) {
+            $userRow = $resultUser->fetch_assoc();
+            $userId = $userRow['id'];
+        } else {
+            $stmtNewUser = $conn->prepare("INSERT INTO users (phone_number, name, email, isBlacklisted) VALUES (?, ?, ?, 0)");
+            $stmtNewUser->bind_param("sss", $phone, $name, $email);
+            $stmtNewUser->execute();
+            $userId = $stmtNewUser->insert_id;
+        }
+
+        // ✅ Step 2: Generate random booking number
+        $bookingNumber = generateBookingNumber();
+
+        // ✅ Step 3: Insert into booking table
+        $stmtBooking = $conn->prepare("
+            INSERT INTO booking (user_id, name, phone_number, email, pax_number, booking_number, created_date, isCancelled)
+            VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)
+        ");
+        $stmtBooking->bind_param("isssis", $userId, $name, $phone, $email, $pax, $bookingNumber);
+        $stmtBooking->execute();
+        $bookingId = $stmtBooking->insert_id;
+
+        // ✅ Step 4: Update selected timeslots and create booking_slot records
+        $slotTimes = [];
+        $date = "";
+
+        foreach ($timeslotIds as $slotId) {
+            // Get slot info
+            $stmtSlot = $conn->prepare("SELECT date, time FROM timeslots WHERE id = ?");
+            $stmtSlot->bind_param("i", $slotId);
+            $stmtSlot->execute();
+            $slotResult = $stmtSlot->get_result();
+            if ($slotRow = $slotResult->fetch_assoc()) {
+                $slotTimes[] = $slotRow['time'];
+                $date = $slotRow['date']; // same date for all slots
+            }
+
+            // Update availability
+            $stmtUpdateSlot = $conn->prepare("UPDATE timeslots SET availability = 0 WHERE id = ?");
+            $stmtUpdateSlot->bind_param("i", $slotId);
+            $stmtUpdateSlot->execute();
+
+            // Link to booking
+            $stmtLinkSlot = $conn->prepare("INSERT INTO booking_slot (booking_id, timeslot_id) VALUES (?, ?)");
+            $stmtLinkSlot->bind_param("ii", $bookingId, $slotId);
+            $stmtLinkSlot->execute();
+        }
+
+        $conn->commit();
+
+        // ✅ Step 5: Format and send SMS
+        sort($slotTimes); // sort times if multiple
+        $formattedTimes = array_map(function($time) {
+          return date("g:i A", strtotime($time)); // g:i A gives 12-hour format with AM/PM
+        }, $slotTimes);
+        
+        $slotString = implode(", ", $formattedTimes);
+        $formattedDate = date("d M", strtotime($date)); // e.g., 30 Apr
+
+        $text = "RM0 Alan Psychic Reading: Your booking $bookingNumber is confirmed for $formattedDate, $slotString. Kindly cancel at least 1 day before if unable to attend.";
+        sendBookingConfirmation($phone, $text);
+
+        echo json_encode(["success" => true, "booking_number" => $bookingNumber]);
+
     } catch (Exception $e) {
-      $conn->rollback();
-      echo json_encode(["success" => false, "message" => $e->getMessage()]);
+        $conn->rollback();
+        echo json_encode(["success" => false, "message" => $e->getMessage()]);
     }
-  }
+}
+
 
   function getBookingDetails($conn) {
     $bookingNumber = $_GET['booking_number'] ?? '';
