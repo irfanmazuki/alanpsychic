@@ -106,6 +106,20 @@
           padding: 15px;
         }
       }
+
+      .terms-row {
+        display: flex;
+        align-items: center;
+        margin-top: 1rem;
+      }
+
+      .terms-row input[type="checkbox"] {
+        margin-right: 8px; /* Space between checkbox and label */
+      }
+
+      .terms-row label {
+        margin: 0; /* Remove default label margin */
+      }
     </style>
   </head>
   <body>
@@ -168,6 +182,70 @@
       </div>
 
       <input type="hidden" id="selectedTime" name="selectedTime" required />
+      <!-- Booking Confirmation Modal -->
+      <div
+        id="confirmationModal"
+        style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          justify-content: center;
+          align-items: center;
+        "
+      >
+        <div
+          style="
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 400px;
+            width: 90%;
+          "
+        >
+          <h3 style="color: #0abab5">Confirm Your Booking</h3>
+          <div id="confirmationDetails" style="margin-bottom: 10px"></div>
+          <div class="terms-row">
+            <input
+              class="form-check-input me-2"
+              type="checkbox"
+              id="termsCheckbox"
+              style="width: 20px"
+            />
+            <label class="form-check-label mb-0" for="agreeTerms">
+              I agree to attend the session on time and will cancel my booking
+              in advance if I am unable to attend.
+            </label>
+          </div>
+          <button
+            onclick="submitConfirmedBooking()"
+            style="
+              background-color: #0abab5;
+              color: white;
+              padding: 10px 20px;
+              border: none;
+              border-radius: 5px;
+              font-weight: bold;
+            "
+          >
+            Confirm
+          </button>
+          <button
+            onclick="closeModal()"
+            style="
+              margin-left: 10px;
+              padding: 10px 20px;
+              border: none;
+              border-radius: 5px;
+            "
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
 
       <button type="submit">Submit Booking</button>
     </form>
@@ -179,6 +257,53 @@
         alert("Please enter the password before accessing the booking page");
         window.location.href = "index.html"; // Redirect back if not authorized
       }
+      function closeModal() {
+        document.getElementById("confirmationModal").style.display = "none";
+      }
+
+      function submitConfirmedBooking() {
+        const termsChecked = document.getElementById("termsCheckbox").checked;
+        if (!termsChecked) {
+          alert("Please agree to the Terms & Conditions before proceeding.");
+          return;
+        }
+
+        // Proceed with AJAX
+        const name = $("#name").val().trim();
+        const phone = $("#phone").val().trim();
+        const email = $("#email").val().trim();
+        const pax = $("#pax").val();
+        const date = $("#date").val();
+
+        $.ajax({
+          url: "api/api.php?action=submit_booking",
+          method: "POST",
+          data: {
+            name: name,
+            phone: phone,
+            email: email,
+            pax: pax,
+            timeslot_ids: selectedTimeIds, // Send ID list
+          },
+          success: function (response) {
+            closeModal();
+            if (response.success) {
+              alert("Booking successful!");
+              window.location.href =
+                "booking-confirmation.html?booking_number=" +
+                response.booking_number;
+            } else {
+              alert("Booking failed: " + response.message);
+            }
+          },
+          error: function (xhr, status, error) {
+            closeModal();
+            console.error("AJAX Error:", error);
+            alert("Error occurred while submitting booking.");
+          },
+        });
+      }
+
       const paxSelect = document.getElementById("pax");
       const dateSelect = document.getElementById("date");
       const timeButtonsDiv = document.getElementById("timeButtons");
@@ -247,38 +372,17 @@
           return;
         }
 
-        const confirmBooking = confirm(
-          `Confirm booking for:\n\nName: ${name}\nPhone: +60${phone}\nEmail: ${email}\nPax: ${pax}\nDate: ${date}\nTimes: ${selectedTimeLabels.join(
-            ", "
-          )}`
-        );
-        if (!confirmBooking) return;
-
-        $.ajax({
-          url: "api/api.php?action=submit_booking",
-          method: "POST",
-          data: {
-            name: name,
-            phone: phone,
-            email: email,
-            pax: pax,
-            timeslot_ids: selectedTimeIds, // Send ID list
-          },
-          success: function (response) {
-            if (response.success) {
-              alert("Booking successful!");
-              window.location.href =
-                "booking-confirmation.html?booking_number=" +
-                response.booking_number;
-            } else {
-              alert("Booking failed: " + response.message);
-            }
-          },
-          error: function (xhr, status, error) {
-            console.error("AJAX Error:", error);
-            alert("Error occurred while submitting booking.");
-          },
-        });
+        // Show modal with details
+        const detailsHtml = `
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Phone:</strong> +60${phone}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Number of Pax:</strong> ${pax}</p>
+          <p><strong>Date:</strong> ${date}</p>
+          <p><strong>Time:</strong> ${selectedTimeLabels.join(", ")}</p>
+        `;
+        document.getElementById("confirmationDetails").innerHTML = detailsHtml;
+        document.getElementById("confirmationModal").style.display = "flex";
       }
 
       function generateTimeButtons(pax) {
