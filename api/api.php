@@ -82,7 +82,7 @@ function verifyOtp($conn) {
 
   // Prepare query to get latest OTP for this phone
   $sql = "
-      SELECT OTP_code, timestamp 
+      SELECT id, OTP_code, timestamp 
       FROM verification_codes 
       WHERE phone_number = ? 
       ORDER BY timestamp DESC 
@@ -102,6 +102,11 @@ function verifyOtp($conn) {
       $isNotExpired = ($now - $timestamp) <= 300; // 5 minutes
 
       if ($otp == $dbOtp && $isNotExpired) {
+          // Mark the number as verified
+          $update = $conn->prepare("UPDATE verification_codes SET isVerified = 1 WHERE id = ?");
+          $update->bind_param("s", $row['id']);
+          $update->execute();
+
           echo json_encode(['success' => true, 'message' => 'OTP verified successfully']);
       } elseif (!$isNotExpired) {
           echo json_encode(['success' => false, 'message' => 'OTP has expired']);
@@ -125,7 +130,7 @@ function sendVerificationCode($conn){
     $stmt->bind_param("ss", $fullPhone, $otp);
     
     if ($stmt->execute()) {
-        $smsResponse = sendOtp($fullPhone, $otp);
+        $smsResponse = "sendOtp($fullPhone, $otp);"
         echo json_encode(['success' => true, 'message' => 'OTP generated and sent', 'response' => $smsResponse]);
     } else {
         // Return the DB error message

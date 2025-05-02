@@ -514,6 +514,12 @@
             alert("Please select a time slot!");
             return;
           }
+          if (!isPhoneVerified(phone.value)) {
+            alert(
+              "Please verify your phone number before submitting the booking."
+            );
+            return;
+          }
           bookingSlot();
         });
 
@@ -609,6 +615,7 @@
           .then((res) => res.json())
           .then((data) => {
             if (data.success) {
+              localStorage.setItem("phone_verified", normalizePhone(phone));
               otpField.style.display = "none";
               otpStatus.innerText = "Phone number verified.";
               otpStatus.style.color = "green";
@@ -624,6 +631,18 @@
             otpStatus.innerText = "❌ Error verifying code.";
             otpStatus.style.color = "red";
           });
+      }
+
+      function normalizePhone(phone) {
+        phone = phone.trim().replace(/^0/, ""); // remove leading 0
+        return "60" + phone;
+      }
+
+      function isPhoneVerified(phone) {
+        return (
+          localStorage.getItem("phone_verified") ===
+          normalizePhone(String(phone))
+        );
       }
     </script>
   </body>
