@@ -51,12 +51,37 @@ switch ($action) {
     case 'admin_login':
       handleAdminLogin();
       break;      
+    case 'send_sms':
+      sendSms();
+      break;
     default:
         echo json_encode(["error" => "No valid action provided."]);
         break;
 }
 
 $conn->close();
+
+function sendSms() {
+  $to = $_POST['to'] ?? '';
+  $text = $_POST['text'] ?? '';
+
+  if (!$to || !$text) {
+    echo json_encode(['success' => false, 'message' => 'Missing parameters']);
+    return;
+  }
+
+  require_once 'bulk360.php'; // path to your SMS class
+
+  $sms = new bulk360();
+  ob_start(); // capture the echo output
+  $sms->sendsms($to, $text);
+  $response = ob_get_clean();
+
+  echo json_encode([
+    'success' => true,
+    'response' => $response
+  ]);
+}
 
 function getTimeslots($conn) {
     $sql = "

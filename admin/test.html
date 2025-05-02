@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SMS Test Page</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #eef6f8;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 20px;
+      }
+      .sms-box {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+      }
+      h2 {
+        text-align: center;
+        color: #0abab5;
+        margin-bottom: 20px;
+      }
+      input[type="text"],
+      textarea,
+      button {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        font-size: 16px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+      }
+      button {
+        background-color: #0abab5;
+        color: white;
+        border: none;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #089e9a;
+      }
+      #response {
+        margin-top: 10px;
+        font-size: 14px;
+        color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sms-box">
+      <h2>Send Test SMS</h2>
+      <form id="smsForm">
+        <input
+          type="text"
+          id="to"
+          placeholder="Phone number (e.g. 60123456789)"
+          required
+        />
+        <textarea
+          id="message"
+          rows="4"
+          placeholder="Enter your message"
+          required
+        ></textarea>
+        <button type="submit">Send SMS</button>
+      </form>
+      <div id="response"></div>
+    </div>
+
+    <script>
+      document
+        .getElementById("smsForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+
+          const to = document.getElementById("to").value.trim();
+          const text = document.getElementById("message").value.trim();
+          const responseBox = document.getElementById("response");
+
+          if (!to || !text) {
+            alert("Please fill in both fields.");
+            return;
+          }
+
+          const xhr = new XMLHttpRequest();
+          const params = `to=${encodeURIComponent(
+            to
+          )}&text=${encodeURIComponent(text)}`;
+
+          xhr.open("POST", "../api/api.php?action=send_sms", true);
+          xhr.setRequestHeader(
+            "Content-Type",
+            "application/x-www-form-urlencoded"
+          );
+
+          xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+              if (xhr.status === 200) {
+                try {
+                  const data = JSON.parse(xhr.responseText);
+                  if (data.success) {
+                    responseBox.innerText = "✅ SMS sent successfully!";
+                  } else {
+                    responseBox.innerText =
+                      "❌ Failed: " + (data.message || "Unknown error");
+                  }
+                } catch (err) {
+                  console.error("Invalid JSON:", xhr.responseText);
+                  responseBox.innerText = "❌ Invalid response from server.";
+                }
+              } else {
+                console.error("AJAX Error:", xhr.statusText);
+                responseBox.innerText = "❌ Request failed.";
+              }
+            }
+          };
+
+          xhr.send(params);
+        });
+    </script>
+  </body>
+</html>
