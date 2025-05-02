@@ -127,11 +127,6 @@
       <h2>Book Your Slot</h2>
 
       <div class="form-group">
-        <label for="name">Name</label>
-        <input type="text" id="name" required />
-      </div>
-
-      <div class="form-group">
         <label for="phone">Phone Number</label>
         <div style="display: flex; align-items: center">
           <span
@@ -147,10 +142,64 @@
           <input
             type="tel"
             id="phone"
+            class="form-control"
             style="border-radius: 0 5px 5px 0; border-left: none"
             required
           />
         </div>
+        <div>
+          <button
+            type="button"
+            class="btn btn-outline-primary mt-2"
+            id="requestOtpBtn"
+            style="width: 100%"
+            onclick="sendVerificationCode()"
+          >
+            Send Verification Code
+          </button>
+        </div>
+        <div id="otpStatus" class="mt-2" style="font-size: 0.9em"></div>
+      </div>
+
+      <!-- OTP Request & Verification Section -->
+      <div class="form-group mt-3" id="otpField" style="display: none">
+        <label for="verificationCode">Phone Verification</label>
+
+        <!-- Code Input -->
+        <div class="input-group">
+          <input
+            type="text"
+            id="verificationCode"
+            class="form-control"
+            placeholder="Enter verification code"
+          />
+          <button
+            type="button"
+            class="btn btn-outline-primary"
+            onclick="verifyCode()"
+            style="width: 100%"
+          >
+            Verify
+          </button>
+        </div>
+
+        <!-- Resend Button -->
+        <div class="text-end mt-2">
+          <button
+            type="button"
+            class="btn btn-link p-0"
+            onclick="sendVerificationCode(true)"
+            id="resendOtpBtn"
+            style="font-size: 0.9em; width: 100%"
+          >
+            Resend code
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" id="name" required />
       </div>
 
       <div class="form-group">
@@ -480,6 +529,102 @@
       $(document).ready(function () {
         loadSlotsData();
       });
+
+      let otpCooldownTimer;
+
+      function sendVerificationCode(resend = false) {
+        const phone = document.getElementById("phone").value.trim();
+        const otpField = document.getElementById("otpField");
+        const otpStatus = document.getElementById("otpStatus");
+        const resendBtn = document.getElementById("resendOtpBtn");
+        const requestOTPBtn = document.getElementById("requestOtpBtn");
+
+        if (!phone) {
+          alert("Please enter your phone number.");
+          return;
+        }
+
+        otpStatus.innerText = "Sending code...";
+        otpStatus.style.color = "#333";
+
+        $.ajax({
+          url: "api/api.php?action=send_verification_code",
+          method: "POST",
+          data: { phone: phone },
+          success: function (data) {
+            if (data.success) {
+              requestOTPBtn.style.display = "none";
+              otpField.style.display = "block";
+              otpStatus.innerText = resend
+                ? "Code resent successfully."
+                : "Verification code sent to your phone.";
+              otpStatus.style.color = "green";
+
+              resendBtn.disabled = true;
+              let countdown = 180;
+              resendBtn.innerText = `Resend in ${countdown}s`;
+
+              otpCooldownTimer = setInterval(() => {
+                countdown--;
+                if (countdown <= 0) {
+                  clearInterval(otpCooldownTimer);
+                  resendBtn.disabled = false;
+                  resendBtn.innerText = "Resend code";
+                } else {
+                  resendBtn.innerText = `Resend in ${countdown}s`;
+                }
+              }, 1000);
+            } else {
+              otpStatus.innerText = "❌ Failed to send code. Please try again.";
+              otpStatus.style.color = "red";
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("OTP Send Error:", error);
+            otpStatus.innerText = "❌ Network error while sending code.";
+            otpStatus.style.color = "red";
+          },
+        });
+      }
+
+      function verifyCode() {
+        const phone = document.getElementById("phone").value.trim();
+        const code = document.getElementById("verificationCode").value.trim();
+        const otpStatus = document.getElementById("otpStatus");
+        const otpField = document.getElementById("otpField");
+
+        if (!phone || !code) {
+          alert("Please enter both your phone number and verification code.");
+          return;
+        }
+
+        otpStatus.innerText = "Verifying...";
+        otpStatus.style.color = "#333";
+
+        fetch("api/api.php?action=verify_code", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ phone, code }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              otpField.style.display = "none";
+              otpStatus.innerText = "Phone number verified.";
+              otpStatus.style.color = "green";
+              window.phoneVerified = true;
+            } else {
+              otpStatus.innerText = data.message;
+              otpStatus.style.color = "red";
+              window.phoneVerified = false;
+            }
+          })
+          .catch((err) => {
+            console.error("Verify error:", err);
+            otpStatus.innerText = "❌ Error verifying code.";
+            otpStatus.style.color = "red";
+          });
+      }
     </script>
   </body>
 </html>

@@ -54,33 +54,98 @@ switch ($action) {
     case 'send_sms':
       sendSms();
       break;
+    case 'send_verification_code':
+      sendVerificationCode($conn);
+      break;
+    case 'verify_code':
+      verifyOtp($conn);
+      break;
     default:
-        echo json_encode(["error" => "No valid action provided."]);
-        break;
+      echo json_encode(["error" => "No valid action provided."]);
+      break;
 }
 
 $conn->close();
 
-function sendSms() {
-  $to = $_POST['to'] ?? '';
-  $text = $_POST['text'] ?? '';
+function verifyOtp($conn) {
+  $phone = $_POST['phone'] ?? '';
+  $otp = $_POST['code'] ?? '';
 
-  if (!$to || !$text) {
-    echo json_encode(['success' => false, 'message' => 'Missing parameters']);
-    return;
+  if (!$phone || !$otp) {
+      echo json_encode(['success' => false, 'message' => 'Phone and OTP are required']);
+      exit;
   }
+
+  // Normalize phone number: remove leading zero and prepend country code
+  $phone = ltrim($phone, '0');
+  $fullPhone = "60" . $phone;
+
+  // Prepare query to get latest OTP for this phone
+  $sql = "
+      SELECT OTP_code, timestamp 
+      FROM verification_codes 
+      WHERE phone_number = ? 
+      ORDER BY timestamp DESC 
+      LIMIT 1
+  ";
+
+  $stmt = $conn->prepare($sql);
+  $stmt->bind_param("s", $fullPhone);
+  $stmt->execute();
+  $result = $stmt->get_result();
+
+  if ($result && $row = $result->fetch_assoc()) {
+      $dbOtp = $row['OTP_code'];
+      $timestamp = strtotime($row['timestamp']);
+      $now = time();
+
+      $isNotExpired = ($now - $timestamp) <= 300; // 5 minutes
+
+      if ($otp == $dbOtp && $isNotExpired) {
+          echo json_encode(['success' => true, 'message' => 'OTP verified successfully']);
+      } elseif (!$isNotExpired) {
+          echo json_encode(['success' => false, 'message' => 'OTP has expired']);
+      } else {
+          echo json_encode(['success' => false, 'message' => 'Incorrect OTP']);
+      }
+  } else {
+      echo json_encode(['success' => false, 'message' => 'No OTP record found']);
+  }
+  exit;
+}
+
+function sendVerificationCode($conn){
+    $phone = $_POST['phone'] ?? '';
+    $phone = ltrim($phone, '0');       // remove leading 0 if any
+    $fullPhone = "60" . $phone;        // prepend Malaysian country code
+  
+    $otp = rand(10000, 99999);
+  
+    $stmt = $conn->prepare("INSERT INTO verification_codes (phone_number, OTP_code, timestamp) VALUES (?, ?, NOW())");
+    $stmt->bind_param("ss", $fullPhone, $otp);
+    
+    if ($stmt->execute()) {
+        $smsResponse = sendOtp($fullPhone, $otp);
+        echo json_encode(['success' => true, 'message' => 'OTP generated and sent', 'response' => $smsResponse]);
+    } else {
+        // Return the DB error message
+        echo json_encode([
+            'success' => false,
+            'message' => 'Failed to store OTP: ' . $stmt->error
+        ]);
+    }
+}
+
+function sendOtp($phone, $otp) {
+  $text = "RM0 Your OTP for Alan Psychic Reading is " . $otp;
 
   require_once 'bulk360.php'; // path to your SMS class
 
   $sms = new bulk360();
   ob_start(); // capture the echo output
-  $sms->sendsms($to, $text);
+  $sms->sendsms($phone, $text);
   $response = ob_get_clean();
-
-  echo json_encode([
-    'success' => true,
-    'response' => $response
-  ]);
+  return ob_get_clean();
 }
 
 function getTimeslots($conn) {
