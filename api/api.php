@@ -130,7 +130,7 @@ function sendVerificationCode($conn){
     $stmt->bind_param("ss", $fullPhone, $otp);
     
     if ($stmt->execute()) {
-        $smsResponse = "sendOtp($fullPhone, $otp);"
+        $smsResponse = sendOtp($fullPhone, $otp);
         echo json_encode(['success' => true, 'message' => 'OTP generated and sent', 'response' => $smsResponse]);
     } else {
         // Return the DB error message
