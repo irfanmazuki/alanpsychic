@@ -472,8 +472,7 @@ function getBookingSlots($conn) {
   
     $conn->begin_transaction();
     try {
-      // 1. Set booking as cancelled
-      $stmt1 = $conn->prepare("UPDATE booking SET isCancelled = 1 WHERE id = ?");
+      $stmt1 = $conn->prepare("UPDATE booking SET isCancelled = 1, cancelled_at = NOW() WHERE id = ?");
       $stmt1->bind_param("i", $bookingId);
       $stmt1->execute();
   
