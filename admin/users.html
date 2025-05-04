@@ -65,7 +65,9 @@
             ></button>
           </div>
           <div class="modal-body">
-            <div id="bookingDetails"></div>
+            <div style="overflow-x: auto; width: 100%">
+              <div id="bookingDetails"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -155,6 +157,7 @@
             <th>Status</th>
             <th>Booked Date</th>
             <th>Date</th> <!-- 🆕 Separate Date Column -->
+            <th>Review</th>
             <th>Timeslot(s)</th> <!-- 🆕 Separate Timeslot Column -->
           </tr>
         </thead>
@@ -178,6 +181,7 @@
                       : ""
                   }
                   <td>${ts.date}</td>
+                  <td>${b.review ? b.review : ""}</td>
                   <td>${ts.time}</td>
                 </tr>
               `

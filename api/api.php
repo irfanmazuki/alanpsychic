@@ -60,6 +60,9 @@ switch ($action) {
     case 'verify_code':
       verifyOtp($conn);
       break;
+    case "submit_review":
+      submitReview($conn);
+      break;
     default:
       echo json_encode(["error" => "No valid action provided."]);
       break;
@@ -162,6 +165,37 @@ function sendBookingConfirmation($phone, $text) {
   $response = ob_get_clean();
   return ob_get_clean();
 }
+
+function submitReview($conn) {
+  $bookingNumber = $_POST['booking_number'] ?? '';
+  $review = $_POST['review'] ?? '';
+
+  if (!$bookingNumber || !$review) {
+      echo json_encode([
+          "success" => false,
+          "message" => "Missing booking number or review content."
+      ]);
+      return;
+  }
+
+  $stmt = $conn->prepare("UPDATE booking SET review = ? WHERE booking_number = ?");
+  $stmt->bind_param("ss", $review, $bookingNumber);
+
+  if ($stmt->execute()) {
+      echo json_encode([
+          "success" => true,
+          "message" => "Review updated successfully."
+      ]);
+  } else {
+      echo json_encode([
+          "success" => false,
+          "message" => "Database update failed: " . $stmt->error
+      ]);
+  }
+
+  $stmt->close();
+}
+
 
 function getTimeslots($conn) {
     $sql = "
@@ -414,7 +448,7 @@ function getBookingSlots($conn) {
     }
   
     // Fetch booking main info
-    $stmt = $conn->prepare("SELECT id, name, phone_number, email, pax_number, created_date, isCancelled FROM booking WHERE booking_number = ?");
+    $stmt = $conn->prepare("SELECT id, name, phone_number, email, pax_number, created_date, isCancelled, review FROM booking WHERE booking_number = ?");
     $stmt->bind_param("s", $bookingNumber);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -563,7 +597,8 @@ function getBookingSlots($conn) {
           b.id AS booking_id,
           b.booking_number,
           b.isCancelled,
-          b.created_date
+          b.created_date,
+          b.review
         FROM 
           booking b
         WHERE 
@@ -605,6 +640,7 @@ function getBookingSlots($conn) {
           "booking_number" => $bookingRow['booking_number'],
           "status" => $bookingRow['isCancelled'] == 1 ? "Cancelled" : "Booked",
           "created_date" => $bookingRow['created_date'],
+          "review" => $bookingRow['review'],
           "timeslots" => $timeslots
         ];
       }
