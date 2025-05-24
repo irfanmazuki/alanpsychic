@@ -2,11 +2,20 @@
 // api.php
 header('Content-Type: application/json');
 
+
 // Database connection
 $servername = "localhost";
 $username = "irfan";
 $password = "irfan123";
 $dbname = "alanpsychic";
+
+$host = $_SERVER['HTTP_HOST'];
+if($host != 'localhost'){
+  $servername = "localhost";
+  $username = "irfan";
+  $password = "Psychic5245@@";
+  $dbname = "psychicr_alanpsychic";
+}
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 
