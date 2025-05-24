@@ -12,7 +12,7 @@ $dbname = "alanpsychic";
 $host = $_SERVER['HTTP_HOST'];
 if($host != 'localhost'){
   $servername = "localhost";
-  $username = "irfan";
+  $username = "psychicr_irfan";
   $password = "Psychic5245@@";
   $dbname = "psychicr_alanpsychic";
 }
