@@ -718,6 +718,21 @@ function getBookingSlots($conn) {
 
     function deleteSlotsByDate($conn) {
       $date = $_POST['date'];
+      // Check if there are any booked slots (availability = 0)
+      $checkStmt = $conn->prepare("SELECT COUNT(*) FROM timeslots WHERE date = ? AND availability = 0");
+      $checkStmt->bind_param("s", $date);
+      $checkStmt->execute();
+      $checkStmt->bind_result($bookedCount);
+      $checkStmt->fetch();
+      $checkStmt->close();
+
+      if ($bookedCount > 0) {
+          echo json_encode([
+              "success" => false,
+              "message" => "Unable to delete. There are bookings on this date. Please cancel them first."
+          ]);
+          return;
+      }
     
       $stmt = $conn->prepare("DELETE FROM timeslots WHERE date = ?");
       $stmt->bind_param("s", $date);
