@@ -176,9 +176,9 @@ function sendVerificationCode($conn){
     }
     
     if ($stmt->execute()) {
-        // $smsResponse = sendOtp($fullPhone, $otp);
-        // echo json_encode(['success' => true, 'message' => 'OTP generated and sent', 'response' => $smsResponse]);
-        echo json_encode(['success' => true]);
+        $smsResponse = sendOtp($fullPhone, $otp);
+        echo json_encode(['success' => true, 'message' => 'OTP generated and sent', 'response' => $smsResponse]);
+        // echo json_encode(['success' => true]);
     } else {
         // Return the DB error message
         echo json_encode([
@@ -201,6 +201,16 @@ function sendOtp($phone, $otp) {
 }
 
 function sendBookingConfirmation($phone, $text) {
+  require_once 'bulk360.php'; // path to your SMS class
+
+  $sms = new bulk360();
+  ob_start(); // capture the echo output
+  $sms->sendsms($phone, $text);
+  $response = ob_get_clean();
+  return ob_get_clean();
+}
+
+function sendBookingCancellation($phone, $text) {
   require_once 'bulk360.php'; // path to your SMS class
 
   $sms = new bulk360();
@@ -537,7 +547,7 @@ function getBookingSlots($conn) {
     }
   
     // Find the booking id
-    $stmt = $conn->prepare("SELECT id FROM booking WHERE booking_number = ? AND isCancelled = 0");
+    $stmt = $conn->prepare("SELECT id, phone_number FROM booking WHERE booking_number = ? AND isCancelled = 0");
     $stmt->bind_param("s", $bookingNumber);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -568,6 +578,9 @@ function getBookingSlots($conn) {
       $stmt2->execute();
   
       $conn->commit();
+
+      $text = "RM0 Alan Psychic Reading: Your booking $bookingNumber has been cancelled";
+      sendBookingCancellation($booking["phone_number"], $text);
       echo json_encode(["success" => true]);
     } catch (Exception $e) {
       $conn->rollback();

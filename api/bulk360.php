@@ -1,6 +1,7 @@
 <?php
 
 class bulk360{
+    var $test = false;
     var $user   = 'k8mepW2dMy';
     var $pass   = 'TTcwUqkX7j89Axt3G0YtEGniFOhsCo4b1Hb9GlGw';
     var $from   = '66688';
@@ -18,6 +19,10 @@ class bulk360{
     }
 
     function sendsms($to, $text) {
+        if ($this->test) {
+            echo 'sentResult = ';
+            return;
+        }
         $this->url = $this->url . "&to=" . $to . "&text=" . rawurlencode($text);
 
         $ch = curl_init();
