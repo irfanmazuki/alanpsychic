@@ -75,6 +75,9 @@ switch ($action) {
     case 'increase_counter':
       increaseCounter($conn);
       break;
+    case 'delete_slots_by_date':
+      deleteSlotsByDate($conn);
+      break;
     default:
       echo json_encode(["error" => "No valid action provided."]);
       break;
@@ -711,6 +714,19 @@ function getBookingSlots($conn) {
       $conn->query("UPDATE booking SET calendar_count = calendar_count + 1 WHERE id = $bookingId");
     }
     echo json_encode(["success" => true]);
+  }
+
+    function deleteSlotsByDate($conn) {
+      $date = $_POST['date'];
+    
+      $stmt = $conn->prepare("DELETE FROM timeslots WHERE date = ?");
+      $stmt->bind_param("s", $date);
+    
+      if ($stmt->execute()) {
+        echo json_encode(["success" => true]);
+      } else {
+        echo json_encode(["success" => false, "message" => $stmt->error]);
+      }
   }
   
 ?>

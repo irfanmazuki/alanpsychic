@@ -83,6 +83,14 @@
           >👥 View All Users</a
         >
       </div>
+      <div class="col-12 col-sm-auto">
+        <button
+          class="btn btn-outline-danger w-100"
+          onclick="openDeleteDateModal()"
+        >
+          Delete Date
+        </button>
+      </div>
     </div>
 
     <div class="table-responsive">
@@ -180,6 +188,46 @@
                 <tbody></tbody>
               </table>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Date Deletion Modal -->
+    <div class="modal fade" id="deleteDateModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Delete Slots by Date</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <label for="deleteSlotDate" class="form-label"
+              >Select Date to Delete:</label
+            >
+            <input type="date" id="deleteSlotDate" class="form-control" />
+            <div id="deleteDateStatus" class="text-danger mt-2"></div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger"
+              onclick="deleteSlotsByDate()"
+            >
+              Delete this date
+            </button>
           </div>
         </div>
       </div>
@@ -607,6 +655,60 @@
         const hour12 = hour % 12 === 0 ? 12 : hour % 12;
 
         return `${hour12}:${String(minute).padStart(2, "0")} ${newMeridiem}`;
+      }
+
+      function openDeleteDateModal() {
+        const deleteModal = new bootstrap.Modal(
+          document.getElementById("deleteDateModal")
+        );
+        document.getElementById("deleteSlotDate").value = "";
+        document.getElementById("deleteDateStatus").textContent = "";
+        deleteModal.show();
+      }
+
+      function deleteSlotsByDate() {
+        const selectedDate = document.getElementById("deleteSlotDate").value;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const chosenDate = new Date(selectedDate);
+        if (chosenDate <= today) {
+          alert("Cannot delete the old date.");
+          return;
+        }
+        if (!selectedDate) {
+          document.getElementById("deleteDateStatus").textContent =
+            "Please select a date.";
+          return;
+        }
+
+        if (
+          !confirm(
+            `Are you sure you want to delete all slots for ${selectedDate}?`
+          )
+        )
+          return;
+
+        $.ajax({
+          url: "../api/api.php?action=delete_slots_by_date",
+          method: "POST",
+          data: { date: selectedDate },
+          success: function (response) {
+            if (response.success) {
+              alert("All slots on selected date deleted successfully.");
+              bootstrap.Modal.getInstance(
+                document.getElementById("deleteDateModal")
+              ).hide();
+              loadSlots();
+            } else {
+              document.getElementById("deleteDateStatus").textContent =
+                response.message || "Failed to delete.";
+            }
+          },
+          error: function () {
+            document.getElementById("deleteDateStatus").textContent =
+              "Server error while deleting slots.";
+          },
+        });
       }
     </script>
   </body>
