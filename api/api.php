@@ -72,6 +72,9 @@ switch ($action) {
     case "submit_review":
       submitReview($conn);
       break;
+    case 'increase_counter':
+      increaseCounter($conn);
+      break;
     default:
       echo json_encode(["error" => "No valid action provided."]);
       break;
@@ -142,8 +145,9 @@ function sendVerificationCode($conn){
     $stmt->bind_param("ss", $fullPhone, $otp);
     
     if ($stmt->execute()) {
-        $smsResponse = sendOtp($fullPhone, $otp);
-        echo json_encode(['success' => true, 'message' => 'OTP generated and sent', 'response' => $smsResponse]);
+        // $smsResponse = sendOtp($fullPhone, $otp);
+        // echo json_encode(['success' => true, 'message' => 'OTP generated and sent', 'response' => $smsResponse]);
+        echo json_encode(['success' => true]);
     } else {
         // Return the DB error message
         echo json_encode([
@@ -457,7 +461,7 @@ function getBookingSlots($conn) {
     }
   
     // Fetch booking main info
-    $stmt = $conn->prepare("SELECT id, name, phone_number, email, pax_number, created_date, isCancelled, review FROM booking WHERE booking_number = ?");
+    $stmt = $conn->prepare("SELECT id, name, phone_number, email, pax_number, created_date, isCancelled, review, ws_count, calendar_count FROM booking WHERE booking_number = ?");
     $stmt->bind_param("s", $bookingNumber);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -473,7 +477,7 @@ function getBookingSlots($conn) {
       FROM booking_slot bs
       JOIN timeslots t ON t.id = bs.timeslot_id
       WHERE bs.booking_id = ?
-      ORDER BY t.date, t.time
+      ORDER BY t.time ASC;
     ");
     $stmt2->bind_param("i", $booking['id']);
     $stmt2->execute();
@@ -694,6 +698,19 @@ function getBookingSlots($conn) {
       $randomString .= $characters[rand(0, $charactersLength - 1)];
     }
     return $randomString;
+  }
+
+  function increaseCounter($conn){
+    $bookingId = $_POST['bookingId'];
+    $type = $_POST['type'];
+
+    if ($type == "whatsapp") {
+      $conn->query("UPDATE booking SET ws_count = ws_count + 1 WHERE id = $bookingId");
+    }
+    else{
+      $conn->query("UPDATE booking SET calendar_count = calendar_count + 1 WHERE id = $bookingId");
+    }
+    echo json_encode(["success" => true]);
   }
   
 ?>

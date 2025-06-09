@@ -12,6 +12,13 @@
       rel="stylesheet"
       href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css"
+      integrity="sha512-5A8nwdMOWrSz20fDsjczgUidUBR8liPYU+WymTZP1lmY9G6Oc7HlZv156XqnsgNUzTyMefFTcsFH/tnJE/+xBg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
     <style>
       body {
         background: #f4f8f9;
@@ -188,6 +195,7 @@
       var latestFilledDate = null;
       var table;
       var currentBookingNumber = null; // set this when opening modal
+      var messageText = "";
 
       function loadSlots() {
         $.ajax({
@@ -276,6 +284,19 @@
         });
       }
 
+      function increaseCounter(bookingId, type) {
+        $.ajax({
+          url: "../api/api.php?action=increase_counter",
+          method: "POST",
+          data: { bookingId: bookingId, type: type },
+          success: function (response) {},
+          error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Error occurred with the counter.");
+          },
+        });
+      }
+
       function deleteSlot(id) {
         if (!confirm("Are you sure you want to delete this slot?")) {
           return;
@@ -315,32 +336,32 @@
               stripeClass === "table-light" ? "table-secondary" : "table-light"; // toggle between two styles
           }
           const row = `
-            <tr class="${stripeClass}">
-            <td>${slot.date}</td>
-            <td>${slot.time}</td>
-            <td>
-                ${slot.booking_number ? slot.booking_number : "-"}
-                ${
-                  slot.isBlacklisted == 1
-                    ? ' <span title="Blacklisted user" style="color: red;">⚠️</span>'
-                    : ""
-                }
-            </td>
-            <td>
-                ${slot.availability == 1 ? "Available" : "Booked"}
-            </td>
-            <td>
-                ${
-                  slot.booking_number
-                    ? `<button class="btn btn-info btn-sm" onclick="openModal('${slot.booking_number}')">View Booking</button>`
-                    : ""
-                }
-                <button class="btn btn-danger btn-sm" onclick="deleteSlot(${
-                  slot.id
-                })">Delete</button>
-            </td>
-            </tr>
-            `;
+                  <tr class="${stripeClass}">
+                  <td>${slot.date}</td>
+                  <td>${slot.time}</td>
+                  <td>
+                      ${slot.booking_number ? slot.booking_number : "-"}
+                      ${
+                        slot.isBlacklisted == 1
+                          ? ' <span title="Blacklisted user" style="color: red;">⚠️</span>'
+                          : ""
+                      }
+                  </td>
+                  <td>
+                      ${slot.availability == 1 ? "Available" : "Booked"}
+                  </td>
+                  <td>
+                      ${
+                        slot.booking_number
+                          ? `<button class="btn btn-info btn-sm" onclick="openModal('${slot.booking_number}')">View Booking</button>`
+                          : ""
+                      }
+                      <button class="btn btn-danger btn-sm" onclick="deleteSlot(${
+                        slot.id
+                      })">Delete</button>
+                  </td>
+                  </tr>
+                  `;
           tbody.append(row);
         });
       }
@@ -356,25 +377,43 @@
             if (response.success) {
               const booking = response.booking;
               let modalContent = `
-          <p><strong>Booking Number:</strong> ${bookingNumber}</p>
-          <p><strong>Name:</strong> ${booking.name}</p>
-          <p><strong>Phone:</strong> +${booking.phone_number}</p>
-          <p><strong>Email:</strong> ${booking.email}</p>
-          <p><strong>Pax:</strong> ${booking.pax_number}</p>
-          <p><strong>Date:</strong> ${booking.date}</p>
-          <p><strong>Timeslots:</strong> ${booking.timeslots.join(", ")}</p>
-        `;
+                <p><strong>Booking Number:</strong> ${bookingNumber}</p>
+                <p><strong>Name:</strong> ${booking.name}</p>
+                <p><strong>Phone:</strong> +${booking.phone_number}</p>
+                <p><strong>Email:</strong> ${booking.email}</p>
+                <p><strong>Pax:</strong> ${booking.pax_number}</p>
+                <p><strong>Date:</strong> ${booking.date}</p>
+                <p><strong>Timeslots:</strong> ${booking.timeslots.join(
+                  ", "
+                )}</p>
+              `;
+              messageText = `Good Day,
+                      Your appointment has been *CONFIRMED*.
+
+                      Booking Number: *${bookingNumber}*
+                      Name: *${booking.name}*
+                      Contact number: +${booking.phone_number}
+                      Date: *${booking.date}*
+                      Time: ${booking.timeslots.join(", ")}
+
+                      *Notes:*
+                      1. Consultation fees: RM 200/pax (pls pack into angpau🙏🏻)
+                      2. Consultation Duration: 55 minutes/pax
+
+                      *We kindly request your punctuality and cooperation to help ensure that your consultation runs smoothly and does not cause any delays for other clients.* Your understanding is greatly appreciated. Thanks!`;
 
               if (booking.isCancelled == 1) {
                 modalContent += `
-            <div class="alert alert-danger mt-3">
-              This booking has been cancelled.
-            </div>
-          `;
+                  <div class="alert alert-danger mt-3">
+                    This booking has been cancelled.
+                  </div>
+                `;
               } else {
                 modalContent += `
-            <button class="btn btn-danger" onclick="adminCancelBooking('${bookingNumber}')">Cancel This Booking</button>
-          `;
+                  <button class="btn btn-danger mt-2" onclick="adminCancelBooking('${bookingNumber}')"><i class="fa fa-ban" aria-hidden="true"></i> Cancel This Booking</button>
+                  <button class="btn btn-success mt-2" onclick="whatsapp(${booking.id}, '${booking.phone_number}')"><i class="fa fa-whatsapp" aria-hidden="true"></i> Whatsapp Customer (${booking.ws_count})</button>
+                  <button class="btn btn-secondary mt-2" onclick="saveGoogleCalendar(${booking.id}, '${booking.name}', '${booking.date}', '${booking.timeslots[0]}', ${booking.timeslots.length})"><i class="fa fa-calendar" aria-hidden="true"></i> Save to calendar (${booking.calendar_count})</button>
+                  `;
               }
 
               $("#bookingInfo").html(modalContent);
@@ -393,6 +432,17 @@
             alert("Error fetching booking details.");
           },
         });
+      }
+
+      function whatsapp(bookingId, phone) {
+        increaseCounter(bookingId, "whatsapp");
+        console.log(phone);
+        const url =
+          "https://api.whatsapp.com/send?phone=" +
+          phone +
+          "&text=" +
+          encodeURIComponent(messageText);
+        window.open(url, "_blank");
       }
 
       function adminCancelBooking(bookingNumber) {
@@ -435,19 +485,19 @@
               tbody.empty();
               data.forEach((item) => {
                 tbody.append(`
-                    <tr>
-                    <td>${item.booking_number}</td>
-                    <td>${item.name}</td>
-                    <td>${item.status}</td>
-                    <td>${item.date}</td>
-                    <td>${
-                      item.timeslots.length > 0
-                        ? item.timeslots.join(", ")
-                        : "-"
-                    }</td> <!-- 🆕 Timeslots -->
-                    <td>${item.created_date}</td>
-                    </tr>
-                `);
+                          <tr>
+                          <td>${item.booking_number}</td>
+                          <td>${item.name}</td>
+                          <td>${item.status}</td>
+                          <td>${item.date}</td>
+                          <td>${
+                            item.timeslots.length > 0
+                              ? item.timeslots.join(", ")
+                              : "-"
+                          }</td> <!-- 🆕 Timeslots -->
+                          <td>${item.created_date}</td>
+                          </tr>
+                      `);
               });
 
               if ($.fn.DataTable.isDataTable("#notificationTable")) {
@@ -512,6 +562,52 @@
           table.column(0).search(filterDate).draw();
         });
       });
+
+      function saveGoogleCalendar(bookingId, name, date, startTime, hours) {
+        increaseCounter(bookingId, "calendar");
+        var endTime = addHoursToTime(startTime, hours);
+        var url =
+          "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" +
+          name.replace(/ /g, "+") +
+          "+Appointment+Time+" +
+          startTime +
+          "&dates=" +
+          convertToUTCFormat(date, startTime) +
+          "/" +
+          convertToUTCFormat(date, endTime);
+        window.open(url, "_blank");
+      }
+
+      function convertToUTCFormat(dateStr, timeStr) {
+        const localDateTime = new Date(`${dateStr} ${timeStr}`);
+        if (isNaN(localDateTime)) {
+          return "Invalid date or time";
+        }
+
+        const year = localDateTime.getUTCFullYear();
+        const month = String(localDateTime.getUTCMonth() + 1).padStart(2, "0");
+        const day = String(localDateTime.getUTCDate()).padStart(2, "0");
+        const hours = String(localDateTime.getUTCHours()).padStart(2, "0");
+        const minutes = String(localDateTime.getUTCMinutes()).padStart(2, "0");
+        const seconds = String(localDateTime.getUTCSeconds()).padStart(2, "0");
+
+        return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
+      }
+
+      function addHoursToTime(timeStr, hoursToAdd) {
+        const [timePart, meridiem] = timeStr.trim().split(" ");
+        let [hour, minute] = timePart.split(":").map(Number);
+
+        if (meridiem === "PM" && hour !== 12) hour += 12;
+        if (meridiem === "AM" && hour === 12) hour = 0;
+        hour = (hour + hoursToAdd) % 24;
+        if (hour < 0) hour += 24;
+
+        const newMeridiem = hour >= 12 ? "PM" : "AM";
+        const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+
+        return `${hour12}:${String(minute).padStart(2, "0")} ${newMeridiem}`;
+      }
     </script>
   </body>
 </html>
