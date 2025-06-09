@@ -118,7 +118,6 @@ function verifyOtp($conn) {
       $now = time();
 
       $isNotExpired = ($now - $timestamp) <= 300; // 5 minutes
-
       if ($otp == $dbOtp && $isNotExpired) {
           // Mark the number as verified
           $update = $conn->prepare("UPDATE verification_codes SET isVerified = 1 WHERE id = ?");
@@ -154,6 +153,27 @@ function sendVerificationCode($conn){
   
     $stmt = $conn->prepare("INSERT INTO verification_codes (phone_number, OTP_code, timestamp) VALUES (?, ?, NOW())");
     $stmt->bind_param("ss", $fullPhone, $otp);
+
+    // Check for any future bookings for this user
+    $today = date('Y-m-d');
+    $stmt = $conn->prepare("
+        SELECT bs.*
+        FROM booking b
+        JOIN booking_slot bs ON bs.booking_id = b.id
+        JOIN timeslots t ON t.id = bs.timeslot_id
+        WHERE b.phone_number = ? AND t.date > ? AND b.isCancelled = 0
+    ");
+    $stmt->bind_param("ss", $fullPhone, $today);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Unable to book because there is an existing active booking. Please cancel it before making a new one."
+        ]);
+        exit;
+    }
     
     if ($stmt->execute()) {
         // $smsResponse = sendOtp($fullPhone, $otp);
@@ -163,7 +183,7 @@ function sendVerificationCode($conn){
         // Return the DB error message
         echo json_encode([
             'success' => false,
-            'message' => 'Failed to store OTP: ' . $stmt->error
+            'message' => '❌ Network error while sending code.: ' . $stmt->error
         ]);
     }
 }

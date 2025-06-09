@@ -587,13 +587,13 @@
                 }
               }, 1000);
             } else {
-              otpStatus.innerText = "❌ Failed to send code. Please try again.";
+              otpStatus.innerText = data.message;
               otpStatus.style.color = "red";
             }
           },
           error: function (xhr, status, error) {
             console.error("OTP Send Error:", error);
-            otpStatus.innerText = "❌ Network error while sending code.";
+            otpStatus.innerText = error;
             otpStatus.style.color = "red";
           },
         });
