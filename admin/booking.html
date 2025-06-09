@@ -127,6 +127,7 @@
             <th>Date</th>
             <th>Time</th>
             <th>Booking Number</th>
+            <th>Name</th>
             <th>Availability</th>
             <th>Action</th>
           </tr>
@@ -421,6 +422,9 @@
                           ? ' <span title="Blacklisted user" style="color: red;">⚠️</span>'
                           : ""
                       }
+                  </td>
+                  <td>
+                      ${slot.name ? slot.name : "-"}
                   </td>
                   <td>
                       ${slot.availability == 1 ? "Available" : "Booked"}

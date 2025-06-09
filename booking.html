@@ -604,6 +604,9 @@
         const code = document.getElementById("verificationCode").value.trim();
         const otpStatus = document.getElementById("otpStatus");
         const otpField = document.getElementById("otpField");
+        const userName = document.getElementById("name");
+        const userEmail = document.getElementById("email");
+        const phoneInput = document.getElementById("phone");
 
         if (!phone || !code) {
           alert("Please enter both your phone number and verification code.");
@@ -625,7 +628,14 @@
               otpField.style.display = "none";
               otpStatus.innerText = "Phone number verified.";
               otpStatus.style.color = "green";
+              otpStatus.style.color = "green";
               window.phoneVerified = true;
+
+              userName.value = data.user.name;
+              userName.disabled = true;
+              userEmail.value = data.user.email;
+              userEmail.disabled = true;
+              phoneInput.disabled = true;
             } else {
               otpStatus.innerText = data.message;
               otpStatus.style.color = "red";

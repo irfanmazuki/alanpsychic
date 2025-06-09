@@ -125,7 +125,15 @@ function verifyOtp($conn) {
           $update->bind_param("s", $row['id']);
           $update->execute();
 
-          echo json_encode(['success' => true, 'message' => 'OTP verified successfully']);
+          $sql2 = "SELECT * FROM users WHERE phone_number = ?";
+          $stmt2 = $conn->prepare($sql2);
+          $stmt2->bind_param("s", $fullPhone);
+          $stmt2->execute();
+          $result2 = $stmt2->get_result();
+
+          $userData = $result2->num_rows > 0 ? $result2->fetch_assoc() : null;
+
+          echo json_encode(['success' => true, 'message' => 'OTP verified successfully', 'user' => $userData]);
       } elseif (!$isNotExpired) {
           echo json_encode(['success' => false, 'message' => 'OTP has expired']);
       } else {
@@ -221,11 +229,12 @@ function getTimeslots($conn) {
             t.time,
             t.availability,
             b.booking_number,
+            b.name,
             u.isBlacklisted
         FROM 
             timeslots t
         LEFT JOIN (
-            SELECT bs.timeslot_id, b.booking_number, b.user_id
+            SELECT bs.timeslot_id, b.booking_number, b.user_id, b.name
             FROM booking_slot bs
             JOIN booking b ON bs.booking_id = b.id
             WHERE b.isCancelled = 0
@@ -249,7 +258,8 @@ function getTimeslots($conn) {
         "time" => date("g:i A", strtotime($row['time'])), // Optional: format to 12-hour
         "availability" => $row['availability'],
         "booking_number" => $row['booking_number'] ?? null,
-        "isBlacklisted" => $row['isBlacklisted']
+        "isBlacklisted" => $row['isBlacklisted'],
+        "name" => $row['name']
       ];
     }
   
