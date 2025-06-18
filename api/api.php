@@ -153,6 +153,7 @@ function sendVerificationCode($conn){
   
     $stmt = $conn->prepare("INSERT INTO verification_codes (phone_number, OTP_code, timestamp) VALUES (?, ?, NOW())");
     $stmt->bind_param("ss", $fullPhone, $otp);
+    $stmt->execute();
 
     // Check for any future bookings for this user
     $today = date('Y-m-d');
