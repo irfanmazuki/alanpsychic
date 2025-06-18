@@ -466,17 +466,13 @@
                   ", "
                 )}</p>
               `;
-              messageText = `Good Day,\nYour appointment has been *CONFIRMED*.<br>Booking Number: *${bookingNumber}*
-                      Name: *${booking.name}*
-                      Contact number: +${booking.phone_number}
-                      Date: *${booking.date}*
-                      Time: ${booking.timeslots.join(", ")}
-
-                      *Notes:*
-                      1. Consultation fees: RM 200/pax (pls pack into angpau🙏🏻)
-                      2. Consultation Duration: 55 minutes/pax
-
-                      *We kindly request your punctuality and cooperation to help ensure that your consultation runs smoothly and does not cause any delays for other clients.* Your understanding is greatly appreciated. Thanks!`;
+              messageText = `Good Day,\nYour appointment has been *CONFIRMED*.\nBooking Number: *${bookingNumber}*\nName: *${
+                booking.name
+              }*\nContact number: +${booking.phone_number}\nDate: *${
+                booking.date
+              }*\nTime: ${booking.timeslots.join(
+                ", "
+              )}\n\n*Notes:*\n1. Consultation fees: RM 200/pax (pls pack into angpau🙏🏻)\n2. Consultation Duration: 55 minutes/pax\n\n*We kindly request your punctuality and cooperation to help ensure that your consultation runs smoothly and does not cause any delays for other clients.* Your understanding is greatly appreciated. Thanks!`;
 
               if (booking.isCancelled == 1) {
                 modalContent += `
