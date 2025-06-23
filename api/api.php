@@ -78,6 +78,9 @@ switch ($action) {
     case 'delete_slots_by_date':
       deleteSlotsByDate($conn);
       break;
+    case 'add_slot_manually':
+      addSlotManually($conn);
+      break;
     default:
       echo json_encode(["error" => "No valid action provided."]);
       break;
@@ -786,6 +789,43 @@ function getBookingSlots($conn) {
       } else {
         echo json_encode(["success" => false, "message" => $stmt->error]);
       }
+  }
+  
+  function addSlotManually($conn) {
+    $date = $_POST['date'] ?? '';
+    $time = $_POST['time'] ?? '';
+
+    if (!$date || !$time) {
+        echo json_encode(["success" => false, "message" => "Date and time are required."]);
+        return;
+    }
+
+    // Convert time to 24-hour format if needed
+    $time24 = date("H:i:s", strtotime($time));
+    $createdDate = date('Y-m-d H:i:s');
+
+    // Check if slot already exists
+    $stmt = $conn->prepare("SELECT id FROM timeslots WHERE date = ? AND time = ?");
+    $stmt->bind_param("ss", $date, $time24);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows > 0) {
+        echo json_encode(["success" => false, "message" => "Slot already exists for this date and time."]);
+        return;
+    }
+
+    $stmt->close();
+
+    // Insert new slot
+    $stmt = $conn->prepare("INSERT INTO timeslots (date, time, created_date, availability) VALUES (?, ?, ?, 1)");
+    $stmt->bind_param("sss", $date, $time24, $createdDate);
+
+    if ($stmt->execute()) {
+        echo json_encode(["success" => true]);
+    } else {
+        echo json_encode(["success" => false, "message" => $stmt->error]);
+    }
   }
   
 ?>

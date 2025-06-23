@@ -113,6 +113,15 @@
                     Delete Date
                   </button>
                 </div>
+                <!-- New Button: Add Slot Manually -->
+                <div class="col-12 col-sm-auto">
+                  <button
+                    class="btn btn-success w-100"
+                    onclick="openAddSlotModal()"
+                  >
+                    Add A Slot
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -255,6 +264,57 @@
               onclick="deleteSlotsByDate()"
             >
               Delete this date
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Slot Manually Modal -->
+    <div class="modal fade" id="addSlotModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Add Slot Manually</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <label for="manualSlotDate" class="form-label">Date:</label>
+            <input type="date" id="manualSlotDate" class="form-control mb-2" />
+            <label for="manualSlotTime" class="form-label">Time:</label>
+            <select id="manualSlotTime" class="form-control mb-2">
+              <option value="">Select Time</option>
+              <option>10:00 AM</option>
+              <option>11:00 AM</option>
+              <option>12:00 PM</option>
+              <option>1:00 PM</option>
+              <option>2:00 PM</option>
+              <option>3:00 PM</option>
+              <option>4:00 PM</option>
+              <option>5:00 PM</option>
+              <option>6:00 PM</option>
+            </select>
+            <div id="addSlotStatus" class="text-danger mt-2"></div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-success"
+              onclick="addSlotManually()"
+            >
+              Add Slot
             </button>
           </div>
         </div>
@@ -732,6 +792,42 @@
             document.getElementById("deleteDateStatus").textContent =
               "Server error while deleting slots.";
           },
+        });
+      }
+
+      function openAddSlotModal() {
+        const modal = new bootstrap.Modal(
+          document.getElementById("addSlotModal")
+        );
+        modal.show();
+      }
+
+      function addSlotManually() {
+        const date = document.getElementById("manualSlotDate").value;
+        const time = document.getElementById("manualSlotTime").value;
+        const statusDiv = document.getElementById("addSlotStatus");
+
+        if (!date || !time) {
+          statusDiv.textContent = "Please enter both date and time.";
+          return;
+        }
+
+        $.post(
+          "../api/api.php?action=add_slot_manually",
+          { date, time },
+          function (response) {
+            if (response.success) {
+              alert("Slot added successfully!");
+              bootstrap.Modal.getInstance(
+                document.getElementById("addSlotModal")
+              ).hide();
+              loadSlots();
+            } else {
+              statusDiv.textContent = response.message || "Failed to add slot.";
+            }
+          }
+        ).fail(function () {
+          statusDiv.textContent = "Server error while adding slot.";
         });
       }
     </script>
