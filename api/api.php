@@ -367,35 +367,43 @@ function getBookingSlots($conn) {
   function addSlots($conn) {
     $fromDate = isset($_POST['from']) ? $_POST['from'] : null;
     $toDate = isset($_POST['to']) ? $_POST['to'] : null;
-  
+
     if (!$fromDate || !$toDate) {
-      echo json_encode(["success" => false, "message" => "Missing dates."]);
-      return;
+        echo json_encode(["success" => false, "message" => "Missing dates."]);
+        return;
     }
-  
+
     $from = new DateTime($fromDate);
-    $from->modify('+1 day'); // Start from next day after latest filled
     $to = new DateTime($toDate);
-  
+
     $times = ['12:00:00', '13:00:00', '14:00:00', '15:00:00', '16:00:00', '17:00:00'];
     $createdDate = date('Y-m-d H:i:s');
-  
+
     $conn->begin_transaction();
     try {
-      while ($from <= $to) {
-        foreach ($times as $time) {
-          $stmt = $conn->prepare("INSERT INTO timeslots (date, time, created_date, availability) VALUES (?, ?, ?, 1)");
-          $dateString = $from->format('Y-m-d');
-          $stmt->bind_param("sss", $dateString, $time, $createdDate);
-          $stmt->execute();
+        while ($from <= $to) {
+            $dateString = $from->format('Y-m-d');
+            foreach ($times as $time) {
+                // Check if slot already exists for this date and time
+                $stmtCheck = $conn->prepare("SELECT id FROM timeslots WHERE date = ? AND time = ?");
+                $stmtCheck->bind_param("ss", $dateString, $time);
+                $stmtCheck->execute();
+                $stmtCheck->store_result();
+                if ($stmtCheck->num_rows == 0) {
+                    // Only insert if not exists
+                    $stmt = $conn->prepare("INSERT INTO timeslots (date, time, created_date, availability) VALUES (?, ?, ?, 1)");
+                    $stmt->bind_param("sss", $dateString, $time, $createdDate);
+                    $stmt->execute();
+                }
+                $stmtCheck->close();
+            }
+            $from->modify('+1 day');
         }
-        $from->modify('+1 day');
-      }
-      $conn->commit();
-      echo json_encode(["success" => true]);
+        $conn->commit();
+        echo json_encode(["success" => true]);
     } catch (Exception $e) {
-      $conn->rollback();
-      echo json_encode(["success" => false, "message" => $e->getMessage()]);
+        $conn->rollback();
+        echo json_encode(["success" => false, "message" => $e->getMessage()]);
     }
   }
 
