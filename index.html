@@ -315,6 +315,9 @@
     <script>
       function showPasswordPrompt() {
         document.getElementById("passwordPrompt").classList.remove("hidden");
+        // Remove the make appointment button after it's clicked
+        const btn = document.querySelector(".make-appointment");
+        if (btn) btn.style.display = "none";
       }
 
       function checkPassword() {
