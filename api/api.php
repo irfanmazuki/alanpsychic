@@ -81,6 +81,15 @@ switch ($action) {
     case 'add_slot_manually':
       addSlotManually($conn);
       break;
+    case 'check_user_exists':
+      checkUserExists($conn);
+      break;
+    case 'register_user':
+      registerUser($conn);
+      break;
+    case 'book_slot':
+      bookSlot($conn);
+      break;
     default:
       echo json_encode(["error" => "No valid action provided."]);
       break;
@@ -825,6 +834,115 @@ function getBookingSlots($conn) {
         echo json_encode(["success" => true]);
     } else {
         echo json_encode(["success" => false, "message" => $stmt->error]);
+    }
+  }
+  
+  function checkUserExists($conn) {
+    $phone = $_POST['phone'] ?? '';
+    if (!$phone) {
+        echo json_encode(['exists' => false, 'message' => 'Phone number required.']);
+        return;
+    }
+
+    $phone = '6'.$phone;
+    
+    $stmt = $conn->prepare("SELECT id FROM users WHERE phone_number = ?");
+    $stmt->bind_param("s", $phone);
+    $stmt->execute();
+    $stmt->store_result();
+
+    $user_id = null;
+    if ($stmt->num_rows > 0) {
+        $stmt->bind_result($user_id);
+        $stmt->fetch();
+        echo json_encode(['exists' => true, 'user_id' => $user_id]);
+    } else {
+        echo json_encode(['exists' => false]);
+    }
+  }
+  
+  function registerUser($conn) {
+    $phone = $_POST['phone'] ?? '';
+    $name = $_POST['name'] ?? '';
+    $email = $_POST['email'] ?? '';
+
+    if (!$phone || !$name || !$email) {
+        echo json_encode(['success' => false, 'message' => 'All fields are required.']);
+        return;
+    }
+
+    // Insert new user
+    $stmt = $conn->prepare("INSERT INTO users (phone_number, name, email, isBlacklisted) VALUES (?, ?, ?, 0)");
+    $stmt->bind_param("sss", $phone, $name, $email);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'userId' => $stmt->insert_id]);
+    } else {
+        echo json_encode(['success' => false, 'message' => $stmt->error]);
+    }
+  }
+  
+  function bookSlot($conn) {
+    $slotId = $_POST['slot_id'] ?? null;
+    $phone = $_POST['phone'] ?? null;
+    $userId = $_POST['user_id'] ?? null;
+
+    if (!$slotId || !$phone) {
+        echo json_encode(['success' => false, 'message' => 'Missing slot or phone.']);
+        return;
+    }
+
+    // Check if slot is available
+    $stmt = $conn->prepare("SELECT availability FROM timeslots WHERE id = ?");
+    $stmt->bind_param("i", $slotId);
+    $stmt->execute();
+    $stmt->bind_result($availability);
+    if (!$stmt->fetch() || $availability != 1) {
+        echo json_encode(['success' => false, 'message' => 'Slot not available.']);
+        return;
+    }
+    $stmt->close();
+
+    // Generate booking number
+    $bookingNumber = generateBookingNumber();
+
+    // Get user info
+    $stmt = $conn->prepare("SELECT name, email FROM users WHERE id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $stmt->bind_result($name, $email);
+    if (!$stmt->fetch()) {
+        echo json_encode(['success' => false, 'message' => 'User info not found.']);
+        return;
+    }
+    $stmt->close();
+
+    $conn->begin_transaction();
+    try {
+        // Insert booking
+        $stmt = $conn->prepare("INSERT INTO booking (user_id, name, phone_number, email, pax_number, booking_number, created_date, isCancelled) VALUES (?, ?, ?, ?, 1, ?, NOW(), 0)");
+        $stmt->bind_param("issss", $userId, $name, $phone, $email, $bookingNumber);
+        $stmt->execute();
+        $bookingId = $stmt->insert_id;
+
+        // Link slot to booking
+        $stmt = $conn->prepare("INSERT INTO booking_slot (booking_id, timeslot_id) VALUES (?, ?)");
+        $stmt->bind_param("ii", $bookingId, $slotId);
+        $stmt->execute();
+
+        // Mark slot as unavailable
+        $stmt = $conn->prepare("UPDATE timeslots SET availability = 0 WHERE id = ?");
+        $stmt->bind_param("i", $slotId);
+        $stmt->execute();
+
+        $conn->commit();
+
+        // Optionally, send SMS confirmation here
+
+        echo json_encode(['success' => true, 'booking_number' => $bookingNumber]);
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
   }
   

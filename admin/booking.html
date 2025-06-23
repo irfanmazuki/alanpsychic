@@ -321,6 +321,76 @@
       </div>
     </div>
 
+    <!-- Manual Register Modal -->
+    <div class="modal fade" id="manualRegisterModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Manual Register for Slot</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div id="manualRegisterStep1">
+              <label for="manualPhone" class="form-label">Phone Number:</label>
+              <input
+                type="text"
+                id="manualPhone"
+                class="form-control mb-2"
+                placeholder="e.g. 0123456789"
+              />
+              <div id="manualRegisterStatus" class="text-danger mb-2"></div>
+              <button
+                class="btn btn-primary"
+                id="manualCheckPhoneBtn"
+                onclick="checkManualPhone()"
+              >
+                Check
+              </button>
+            </div>
+            <div id="manualRegisterStep2" style="display: none">
+              <div id="manualUserExists" style="display: none">
+                <div class="alert alert-success">
+                  User found. Proceed with booking?
+                </div>
+                <button
+                  class="btn btn-success"
+                  id="manualConfirmExistingBtn"
+                  onclick="confirmManualBooking()"
+                >
+                  Confirm Booking
+                </button>
+              </div>
+              <div id="manualUserNew" style="display: none">
+                <div class="alert alert-info">
+                  New user. Please provide details:
+                </div>
+                <label for="manualName" class="form-label">Name:</label>
+                <input type="text" id="manualName" class="form-control mb-2" />
+                <label for="manualEmail" class="form-label">Email:</label>
+                <input
+                  type="email"
+                  id="manualEmail"
+                  class="form-control mb-2"
+                />
+                <button
+                  class="btn btn-success"
+                  id="manualConfirmNewBtn"
+                  onclick="confirmManualBooking()"
+                >
+                  Confirm Booking
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
@@ -332,6 +402,7 @@
       var table;
       var currentBookingNumber = null; // set this when opening modal
       var messageText = "";
+      let manualUserId = null; // Add this at the top with other globals
 
       function loadSlots() {
         $.ajax({
@@ -493,6 +564,8 @@
                       ${
                         slot.booking_number
                           ? `<button class="btn btn-info btn-sm" onclick="openModal('${slot.booking_number}')">View Booking</button>`
+                          : slot.availability == 1
+                          ? `<button class="btn btn-primary btn-sm" onclick="openManualRegisterModal('${slot.id}', '${slot.date}', '${slot.time}')">Register</button>`
                           : ""
                       }
                       <button class="btn btn-danger btn-sm" onclick="deleteSlot(${
@@ -829,6 +902,158 @@
         ).fail(function () {
           statusDiv.textContent = "Server error while adding slot.";
         });
+      }
+
+      function checkManualPhone() {
+        const phone = document.getElementById("manualPhone").value.trim();
+        const statusDiv = document.getElementById("manualRegisterStatus");
+
+        if (!phone) {
+          statusDiv.textContent = "Phone number is required.";
+          return;
+        }
+
+        const phoneRegex = /^[0-9]{10,11}$/;
+        if (!phoneRegex.test(phone)) {
+          statusDiv.textContent =
+            "Invalid phone number format not including country code.";
+          return;
+        }
+        console.log(phone);
+        $.ajax({
+          url: "../api/api.php?action=check_user_exists",
+          method: "POST",
+          data: { phone: phone },
+          success: function (response) {
+            document.getElementById("manualRegisterStep2").style.display =
+              "block";
+            if (response.exists) {
+              manualUserId = response.user_id || null; // Store user_id if returned
+              document.getElementById("manualUserExists").style.display =
+                "block";
+              document.getElementById("manualUserNew").style.display = "none";
+            } else {
+              manualUserId = null;
+              document.getElementById("manualUserExists").style.display =
+                "none";
+              document.getElementById("manualUserNew").style.display = "block";
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Error checking user existence.");
+          },
+        });
+      }
+
+      function confirmManualBooking() {
+        const phone = document.getElementById("manualPhone").value.trim();
+        const name = document.getElementById("manualName")?.value.trim();
+        const email = document.getElementById("manualEmail")?.value.trim();
+        const statusDiv = document.getElementById("manualRegisterStatus");
+
+        if (!phone) {
+          statusDiv.textContent = "Phone number is required.";
+          return;
+        }
+
+        // For existing users, just book the slot
+        if (
+          document.getElementById("manualUserExists").style.display !== "none"
+        ) {
+          bookSlotForExistingUser(phone);
+          return;
+        }
+
+        // For new users, validate and register
+        if (!name || !email) {
+          statusDiv.textContent = "Please provide all details.";
+          return;
+        }
+
+        const userData = { phone, name, email };
+
+        $.ajax({
+          url: "../api/api.php?action=register_user",
+          method: "POST",
+          data: userData,
+          success: function (response) {
+            if (response.success) {
+              alert("Registration successful! Booking the slot now...");
+              bookSlotForNewUser(response.userId, phone);
+            } else {
+              statusDiv.textContent =
+                response.message || "Registration failed.";
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            statusDiv.textContent = "Error during registration.";
+          },
+        });
+      }
+
+      function bookSlotForExistingUser(phone) {
+        const slotId = currentSlotId;
+        $.ajax({
+          url: "../api/api.php?action=book_slot",
+          method: "POST",
+          data: { slot_id: slotId, phone: phone, user_id: manualUserId }, // Pass user_id
+          success: function (response) {
+            if (response.success) {
+              alert("Slot booked successfully!");
+              loadSlots();
+              bootstrap.Modal.getInstance(
+                document.getElementById("manualRegisterModal")
+              ).hide();
+            } else {
+              alert("Failed to book slot: " + response.message);
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Error booking slot.");
+          },
+        });
+      }
+
+      function bookSlotForNewUser(userId, phone) {
+        const slotId = currentSlotId; // This should be set when opening the manual register modal
+        $.ajax({
+          url: "../api/api.php?action=book_slot",
+          method: "POST",
+          data: { slot_id: slotId, user_id: userId, phone: phone },
+          success: function (response) {
+            if (response.success) {
+              alert("Slot booked successfully!");
+              loadSlots();
+              bootstrap.Modal.getInstance(
+                document.getElementById("manualRegisterModal")
+              ).hide();
+            } else {
+              alert("Failed to book slot: " + response.message);
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Error booking slot.");
+          },
+        });
+      }
+
+      function openManualRegisterModal(slotId, date, time) {
+        currentSlotId = slotId; // Set the current slot ID
+        document.getElementById("manualPhone").value = "";
+        document.getElementById("manualName").value = "";
+        document.getElementById("manualEmail").value = "";
+        document.getElementById("manualRegisterStatus").textContent = "";
+        document.getElementById("manualUserExists").style.display = "none";
+        document.getElementById("manualUserNew").style.display = "none";
+
+        const modal = new bootstrap.Modal(
+          document.getElementById("manualRegisterModal")
+        );
+        modal.show();
       }
     </script>
   </body>

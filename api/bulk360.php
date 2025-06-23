@@ -1,7 +1,7 @@
 <?php
 
 class bulk360{
-    var $test = false;
+    var $test = true;
     var $user   = 'k8mepW2dMy';
     var $pass   = 'TTcwUqkX7j89Axt3G0YtEGniFOhsCo4b1Hb9GlGw';
     var $from   = '66688';
