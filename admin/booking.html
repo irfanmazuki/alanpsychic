@@ -573,16 +573,18 @@
                 <p><strong>Phone:</strong> +${booking.phone_number}</p>
                 <p><strong>Email:</strong> ${booking.email}</p>
                 <p><strong>Pax:</strong> ${booking.pax_number}</p>
-                <p><strong>Date:</strong> ${booking.date}</p>
+                <p><strong>Date:</strong> ${formatLongDate(booking.date)}</p>
                 <p><strong>Timeslots:</strong> ${booking.timeslots.join(
                   ", "
                 )}</p>
               `;
               messageText = `Good Day,\nYour appointment has been *CONFIRMED*.\nBooking Number: *${bookingNumber}*\nName: *${
                 booking.name
-              }*\nContact number: +${booking.phone_number}\nDate: *${
+              }*\nContact number: +${
+                booking.phone_number
+              }\nDate: *${formatLongDate(
                 booking.date
-              }*\nTime: ${booking.timeslots.join(
+              )}*\nTime: ${booking.timeslots.join(
                 ", "
               )}\n\n*Notes:*\n1. Consultation fees: RM 200/pax (pls pack into angpau🙏🏻)\n2. Consultation Duration: 55 minutes/pax\n\n*We kindly request your punctuality and cooperation to help ensure that your consultation runs smoothly and does not cause any delays for other clients.* Your understanding is greatly appreciated. Thanks!`;
 
@@ -1046,6 +1048,18 @@
           document.getElementById("manualRegisterModal")
         );
         modal.show();
+      }
+
+      // Add this helper function near the top or bottom of your <script> tag:
+      function formatLongDate(dateStr) {
+        // dateStr is expected in 'YYYY-MM-DD'
+        const dateObj = new Date(dateStr);
+        if (isNaN(dateObj)) return dateStr;
+        const day = dateObj.getDate();
+        const month = dateObj.toLocaleString("en-US", { month: "long" });
+        const year = dateObj.getFullYear();
+        const weekday = dateObj.toLocaleString("en-US", { weekday: "long" });
+        return `${day} ${month} ${year} (${weekday})`;
       }
     </script>
   </body>
