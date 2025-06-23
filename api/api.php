@@ -271,13 +271,15 @@ function getTimeslots($conn) {
             t.date,
             t.time,
             t.availability,
+            b.ws_count,
+            b.calendar_count,
             b.booking_number,
             b.name,
             u.isBlacklisted
         FROM 
             timeslots t
         LEFT JOIN (
-            SELECT bs.timeslot_id, b.booking_number, b.user_id, b.name
+            SELECT bs.timeslot_id, b.booking_number, b.user_id, b.name, b.ws_count, b.calendar_count
             FROM booking_slot bs
             JOIN booking b ON bs.booking_id = b.id
             WHERE b.isCancelled = 0
@@ -302,7 +304,9 @@ function getTimeslots($conn) {
         "availability" => $row['availability'],
         "booking_number" => $row['booking_number'] ?? null,
         "isBlacklisted" => $row['isBlacklisted'],
-        "name" => $row['name']
+        "name" => $row['name'],
+        "ws_count" => $row['ws_count'] ?? 0,
+        "calendar_count" => $row['calendar_count'] ?? 0
       ];
     }
   

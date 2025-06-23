@@ -581,38 +581,55 @@
             stripeClass =
               stripeClass === "table-light" ? "table-secondary" : "table-light"; // toggle between two styles
           }
+
+          // WhatsApp and Calendar icons
+          let icons = "";
+          if (slot.booking_number) {
+            // You may need to fetch ws_count and calendar_count for each slot if not present
+            // For now, assume slot.ws_count and slot.calendar_count are available
+            if (slot.ws_count && slot.ws_count > 0) {
+              icons +=
+                ' <i class="fa fa-whatsapp" style="color: #25D366;" title="Contacted via WhatsApp"></i>';
+            }
+            if (slot.calendar_count && slot.calendar_count > 0) {
+              icons +=
+                ' <i class="fa fa-calendar" style="color: #4285F4;" title="Added to Calendar"></i>';
+            }
+          }
+
           const row = `
-                  <tr class="${stripeClass}">
-                  <td>${slot.date}</td>
-                  <td>${slot.time}</td>
-                  <td>
-                      ${slot.booking_number ? slot.booking_number : "-"}
-                      ${
-                        slot.isBlacklisted == 1
-                          ? ' <span title="Blacklisted user" style="color: red;">⚠️</span>'
-                          : ""
-                      }
-                  </td>
-                  <td>
-                      ${slot.name ? slot.name : "-"}
-                  </td>
-                  <td>
-                      ${slot.availability == 1 ? "Available" : "Booked"}
-                  </td>
-                  <td>
-                      ${
-                        slot.booking_number
-                          ? `<button class="btn btn-info btn-sm" onclick="openModal('${slot.booking_number}')">View Booking</button>`
-                          : slot.availability == 1
-                          ? `<button class="btn btn-primary btn-sm" onclick="openManualRegisterModal('${slot.id}', '${slot.date}', '${slot.time}')">Register</button>`
-                          : ""
-                      }
-                      <button class="btn btn-danger btn-sm" onclick="deleteSlot(${
-                        slot.id
-                      })">Delete</button>
-                  </td>
-                  </tr>
-                  `;
+            <tr class="${stripeClass}">
+            <td>${slot.date}</td>
+            <td>${slot.time}</td>
+            <td>
+                ${slot.booking_number ? slot.booking_number : "-"}
+                ${
+                  slot.isBlacklisted == 1
+                    ? ' <span title="Blacklisted user" style="color: red;">⚠️</span>'
+                    : ""
+                }
+                ${icons}
+            </td>
+            <td>
+                ${slot.name ? slot.name : "-"}
+            </td>
+            <td>
+                ${slot.availability == 1 ? "Available" : "Booked"}
+            </td>
+            <td>
+                ${
+                  slot.booking_number
+                    ? `<button class="btn btn-info btn-sm" onclick="openModal('${slot.booking_number}')">View Booking</button>`
+                    : slot.availability == 1
+                    ? `<button class="btn btn-primary btn-sm" onclick="openManualRegisterModal('${slot.id}', '${slot.date}', '${slot.time}')">Register</button>`
+                    : ""
+                }
+                <button class="btn btn-danger btn-sm" onclick="deleteSlot(${
+                  slot.id
+                })">Delete</button>
+            </td>
+            </tr>
+            `;
           tbody.append(row);
         });
       }
