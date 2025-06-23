@@ -614,7 +614,7 @@
 
           const row = `
             <tr class="${stripeClass}">
-            <td>${slot.date}</td>
+            <td>${formatLongDate(slot.date)}</td>
             <td>${slot.time}</td>
             <td>
                 ${slot.booking_number ? slot.booking_number : "-"}
@@ -634,12 +634,12 @@
             <td>
                 ${
                   slot.booking_number
-                    ? `<button class="btn btn-info btn-sm" onclick="openModal('${slot.booking_number}')">View Booking</button>`
+                    ? `<button class="btn btn-info btn-sm mb-1" onclick="openModal('${slot.booking_number}')">View Booking</button>`
                     : slot.availability == 1
-                    ? `<button class="btn btn-primary btn-sm" onclick="openManualRegisterModal('${slot.id}', '${slot.date}', '${slot.time}')">Register</button>`
+                    ? `<button class="btn btn-primary btn-sm mb-1" onclick="openManualRegisterModal('${slot.id}', '${slot.date}', '${slot.time}')">Register</button>`
                     : ""
                 }
-                <button class="btn btn-danger btn-sm" onclick="deleteSlot(${
+                <button class="btn btn-danger btn-sm mb-1" onclick="deleteSlot(${
                   slot.id
                 })">Delete</button>
             </td>
