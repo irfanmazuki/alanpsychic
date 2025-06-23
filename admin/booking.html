@@ -128,7 +128,7 @@
             <th>Time</th>
             <th>Booking Number</th>
             <th>Name</th>
-            <th>Availability</th>
+            <th>Booked Date</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -576,14 +576,12 @@
           if (slot.date !== currentDate) {
             currentDate = slot.date;
             stripeClass =
-              stripeClass === "table-light" ? "table-secondary" : "table-light"; // toggle between two styles
+              stripeClass === "table-light" ? "table-secondary" : "table-light";
           }
 
           // WhatsApp and Calendar icons
           let icons = "";
           if (slot.booking_number) {
-            // You may need to fetch ws_count and calendar_count for each slot if not present
-            // For now, assume slot.ws_count and slot.calendar_count are available
             if (slot.ws_count && slot.ws_count > 0) {
               icons +=
                 ' <i class="fa fa-whatsapp" style="color: #25D366;" title="Contacted via WhatsApp"></i>';
@@ -591,6 +589,26 @@
             if (slot.calendar_count && slot.calendar_count > 0) {
               icons +=
                 ' <i class="fa fa-calendar" style="color: #4285F4;" title="Added to Calendar"></i>';
+            }
+          }
+
+          // Only show booking created date if slot is booked and created_date exists
+          let createdAt = "-";
+          if (slot.booking_number && slot.created_date) {
+            const d = new Date(slot.created_date.replace(" ", "T"));
+            if (!isNaN(d)) {
+              createdAt =
+                d.getFullYear() +
+                "-" +
+                String(d.getMonth() + 1).padStart(2, "0") +
+                "-" +
+                String(d.getDate()).padStart(2, "0") +
+                " " +
+                String(d.getHours()).padStart(2, "0") +
+                ":" +
+                String(d.getMinutes()).padStart(2, "0");
+            } else {
+              createdAt = slot.created_date;
             }
           }
 
@@ -611,7 +629,7 @@
                 ${slot.name ? slot.name : "-"}
             </td>
             <td>
-                ${slot.availability == 1 ? "Available" : "Booked"}
+                ${createdAt}
             </td>
             <td>
                 ${

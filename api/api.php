@@ -275,15 +275,16 @@ function getTimeslots($conn) {
             b.calendar_count,
             b.booking_number,
             b.name,
-            u.isBlacklisted
+            u.isBlacklisted,
+            b.created_date
         FROM 
             timeslots t
         LEFT JOIN (
-            SELECT bs.timeslot_id, b.booking_number, b.user_id, b.name, b.ws_count, b.calendar_count
+            SELECT bs.timeslot_id, b.booking_number, b.user_id, b.name, b.ws_count, b.calendar_count, b.created_date
             FROM booking_slot bs
             JOIN booking b ON bs.booking_id = b.id
             WHERE b.isCancelled = 0
-            GROUP BY bs.timeslot_id  -- ensures only one booking per timeslot
+            GROUP BY bs.timeslot_id
         ) AS b ON b.timeslot_id = t.id
         LEFT JOIN users u ON b.user_id = u.id
         WHERE 
@@ -291,25 +292,25 @@ function getTimeslots($conn) {
         ORDER BY 
             t.date ASC, t.time ASC
     ";
-  
-  
+
     $result = $conn->query($sql);
     $timeslots = [];
-  
+
     while ($row = $result->fetch_assoc()) {
       $timeslots[] = [
         "id" => $row['id'],
         "date" => $row['date'],
-        "time" => date("g:i A", strtotime($row['time'])), // Optional: format to 12-hour
+        "time" => date("g:i A", strtotime($row['time'])),
         "availability" => $row['availability'],
         "booking_number" => $row['booking_number'] ?? null,
         "isBlacklisted" => $row['isBlacklisted'],
         "name" => $row['name'],
         "ws_count" => $row['ws_count'] ?? 0,
-        "calendar_count" => $row['calendar_count'] ?? 0
+        "calendar_count" => $row['calendar_count'] ?? 0,
+        "created_date" => $row['created_date'] ?? null // <-- add this
       ];
     }
-  
+
     echo json_encode($timeslots);
   }
   
