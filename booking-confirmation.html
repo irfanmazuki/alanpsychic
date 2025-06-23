@@ -48,6 +48,65 @@
         return params.get("booking_number");
       }
 
+      // Add this helper function
+      function addHoursToTime(timeStr, hoursToAdd) {
+        const [timePart, meridiem] = timeStr.trim().split(" ");
+        let [hour, minute] = timePart.split(":").map(Number);
+
+        if (meridiem === "PM" && hour !== 12) hour += 12;
+        if (meridiem === "AM" && hour === 12) hour = 0;
+        hour = (hour + hoursToAdd) % 24;
+        if (hour < 0) hour += 24;
+
+        const newMeridiem = hour >= 12 ? "PM" : "AM";
+        const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+
+        return `${hour12}:${String(minute).padStart(2, "0")} ${newMeridiem}`;
+      }
+
+      function convertToUTCFormat(dateStr, timeStr) {
+        const localDateTime = new Date(`${dateStr} ${timeStr}`);
+        if (isNaN(localDateTime)) {
+          return "Invalid date or time";
+        }
+
+        const year = localDateTime.getUTCFullYear();
+        const month = String(localDateTime.getUTCMonth() + 1).padStart(2, "0");
+        const day = String(localDateTime.getUTCDate()).padStart(2, "0");
+        const hours = String(localDateTime.getUTCHours()).padStart(2, "0");
+        const minutes = String(localDateTime.getUTCMinutes()).padStart(2, "0");
+        const seconds = String(localDateTime.getUTCSeconds()).padStart(2, "0");
+
+        return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
+      }
+
+      function saveGoogleCalendar(
+        bookingNumber,
+        name,
+        date,
+        startTime,
+        hours,
+        pax
+      ) {
+        var endTime = addHoursToTime(startTime, hours);
+        var url =
+          "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" +
+          encodeURIComponent(
+            "Alan Reading " +
+              "Booking #" +
+              bookingNumber +
+              " " +
+              pax +
+              " pax Appointment Time " +
+              startTime
+          ) +
+          "&dates=" +
+          convertToUTCFormat(date, startTime) +
+          "/" +
+          convertToUTCFormat(date, endTime);
+        window.open(url, "_blank");
+      }
+
       $(document).ready(function () {
         const bookingNumber = getBookingNumberFromUrl();
         if (!bookingNumber) {
@@ -68,33 +127,45 @@
 
               if (booking.isCancelled == 1) {
                 $("#confirmationContent").html(`
-      <h2 style="color:red;">Booking Cancelled</h2>
-      <p>Your booking number <strong>${bookingNumber}</strong> has been cancelled.</p>
-      <br>
-      <a href="index.html" class="btn btn-primary">Return to Home</a>
-    `);
+  <h2 style="color:red;">Booking Cancelled</h2>
+  <p>Your booking number <strong>${bookingNumber}</strong> has been cancelled.</p>
+  <br>
+  <a href="index.html" class="btn btn-primary">Return to Home</a>
+`);
               } else {
+                // Use the first timeslot as the start time, and the number of timeslots as hours
+                const startTime = booking.timeslots[0];
+                const hours = booking.timeslots.length;
+                const pax = booking.pax_number;
+                const name = booking.name;
+                const date = booking.date;
+                const phone_number = booking.phone_number;
+
                 $("#confirmationContent").html(`
-              <h2>Booking Confirmed!</h2>
-              <p><strong>Booking Number:</strong> ${bookingNumber}</p>
-              <p><strong>Name:</strong> ${booking.name}</p>
-              <p><strong>Phone:</strong> +${booking.phone_number}</p>
-              <p><strong>Email:</strong> ${booking.email}</p>
-              <p><strong>Pax:</strong> ${booking.pax_number}</p>
-              <p><strong>Date:</strong> ${booking.date}</p>
-              <p><strong>Timeslots:</strong> ${booking.timeslots.join(", ")}</p>
+          <h2>Booking Confirmed!</h2>
+          <p><strong>Booking Number:</strong> ${bookingNumber}</p>
+          <p><strong>Name:</strong> ${booking.name}</p>
+          <p><strong>Phone:</strong> +${booking.phone_number}</p>
+          <p><strong>Email:</strong> ${booking.email}</p>
+          <p><strong>Pax:</strong> ${booking.pax_number}</p>
+          <p><strong>Date:</strong> ${booking.date}</p>
+          <p><strong>Timeslots:</strong> ${booking.timeslots.join(", ")}</p>
 
-              <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404;">
-                <strong>Important:</strong><br>
-                Please arrive at least <strong>15 minutes before</strong> your booking time.<br>
-                If you wish to cancel, <strong>please cancel at least 1 day before</strong> to avoid getting blacklisted.
-              </div>
+          <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404;">
+            <strong>Important:</strong><br>
+            Please arrive at least <strong>15 minutes before</strong> your booking time.<br>
+            If you wish to cancel, <strong>please cancel at least 1 day before</strong> to avoid getting blacklisted.
+          </div>
 
-              <br>
-              <button class="btn btn-danger" onclick="cancelBooking('${bookingNumber}')">Cancel Booking</button>
-              <br><br>
-              <a href="index.html" class="btn btn-primary">Return to Home</a>
-            `);
+          <br>
+          <button class="btn btn-success" onclick="saveGoogleCalendar('${bookingNumber}', '${name}', '${date}', '${startTime}', ${hours}, ${pax})">
+            <i class="fa fa-calendar"></i> Save to Google Calendar
+          </button>
+          <br><br>
+          <button class="btn btn-danger" onclick="cancelBooking('${bookingNumber}')">Cancel Booking</button>
+          <br><br>
+          <a href="index.html" class="btn btn-primary">Return to Home</a>
+        `);
               }
             } else {
               $("#confirmationContent").html(
