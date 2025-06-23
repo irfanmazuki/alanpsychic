@@ -447,10 +447,24 @@ function getBookingSlots($conn) {
             $userId = $stmtNewUser->insert_id;
         }
 
-        // ✅ Step 2: Generate random booking number
+        // ✅ Step 2: Check all selected slots are still available (atomic check)
+        $placeholders = implode(',', array_fill(0, count($timeslotIds), '?'));
+        $types = str_repeat('i', count($timeslotIds));
+        $checkSql = "SELECT id FROM timeslots WHERE id IN ($placeholders) AND availability = 0";
+        $checkStmt = $conn->prepare($checkSql);
+        $checkStmt->bind_param($types, ...$timeslotIds);
+        $checkStmt->execute();
+        $checkResult = $checkStmt->get_result();
+        if ($checkResult->num_rows > 0) {
+            $conn->rollback();
+            echo json_encode(["success" => false, "message" => "The chosen slot is booked, please try again with different slot"]);
+            return;
+        }
+
+        // ✅ Step 3: Generate random booking number
         $bookingNumber = generateBookingNumber();
 
-        // ✅ Step 3: Insert into booking table
+        // ✅ Step 4: Insert into booking table
         $stmtBooking = $conn->prepare("
             INSERT INTO booking (user_id, name, phone_number, email, pax_number, booking_number, created_date, isCancelled)
             VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)
@@ -459,7 +473,7 @@ function getBookingSlots($conn) {
         $stmtBooking->execute();
         $bookingId = $stmtBooking->insert_id;
 
-        // ✅ Step 4: Update selected timeslots and create booking_slot records
+        // ✅ Step 5: Update selected timeslots and create booking_slot records
         $slotTimes = [];
         $date = "";
 
@@ -487,7 +501,7 @@ function getBookingSlots($conn) {
 
         $conn->commit();
 
-        // ✅ Step 5: Format and send SMS
+        // ✅ Step 6: Format and send SMS
         sort($slotTimes); // sort times if multiple
         $formattedTimes = array_map(function($time) {
           return date("g:i A", strtotime($time)); // g:i A gives 12-hour format with AM/PM
