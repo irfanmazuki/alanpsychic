@@ -114,11 +114,11 @@
       }
 
       .terms-row input[type="checkbox"] {
-        margin-right: 8px; /* Space between checkbox and label */
+        margin-right: 8px;
       }
 
       .terms-row label {
-        margin: 0; /* Remove default label margin */
+        margin: 0;
       }
 
       #confirmationModal {
@@ -135,7 +135,7 @@
       }
 
       #confirmationModal.active {
-        display: flex; /* or block depending on layout */
+        display: flex;
         justify-content: center;
         align-items: center;
       }
@@ -205,8 +205,6 @@
       <!-- OTP Request & Verification Section -->
       <div class="form-group mt-3" id="otpField" style="display: none">
         <label for="verificationCode">Phone Verification</label>
-
-        <!-- Code Input -->
         <div class="input-group">
           <input
             type="text"
@@ -223,8 +221,6 @@
             Verify
           </button>
         </div>
-
-        <!-- Resend Button -->
         <div class="text-end mt-2">
           <button
             type="button"
@@ -241,11 +237,6 @@
       <div class="form-group">
         <label for="name">Name</label>
         <input type="text" id="name" required />
-      </div>
-
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" id="email" required />
       </div>
       <button type="submit">Submit Booking</button>
     </form>
@@ -307,7 +298,7 @@
     <script>
       if (localStorage.getItem("auth") !== "granted") {
         alert("Please enter the password before accessing the booking page");
-        window.location.href = "index.html"; // Redirect back if not authorized
+        window.location.href = "index.html";
       }
 
       function closeModal() {
@@ -330,7 +321,6 @@
         // Proceed with AJAX
         const name = $("#name").val().trim();
         const phone = normalizePhone($("#phone").val().trim());
-        const email = $("#email").val().trim();
         const pax = $("#pax").val();
         const date = $("#date").val();
 
@@ -340,9 +330,8 @@
           data: {
             name: name,
             phone: phone,
-            email: email,
             pax: pax,
-            timeslot_ids: selectedTimeIds, // Send ID list
+            timeslot_ids: selectedTimeIds,
           },
           success: function (response) {
             closeModal();
@@ -374,7 +363,7 @@
 
       function loadSlotsData() {
         $.ajax({
-          url: "api/api.php?action=get_booking_slots", // <-- new function in api.php
+          url: "api/api.php?action=get_booking_slots",
           method: "GET",
           success: function (response) {
             slotsData = response;
@@ -422,7 +411,6 @@
       function bookingSlot() {
         const name = $("#name").val().trim();
         const phone = $("#phone").val().trim();
-        const email = $("#email").val().trim();
         const pax = $("#pax").val();
         const date = $("#date").val();
 
@@ -435,7 +423,6 @@
         const detailsHtml = `
           <p><strong>Name:</strong> ${name}</p>
           <p><strong>Phone:</strong> +60${phone}</p>
-          <p><strong>Email:</strong> ${email}</p>
           <p><strong>Number of Pax:</strong> ${pax}</p>
           <p><strong>Date:</strong> ${date}</p>
           <p><strong>Time:</strong> ${selectedTimeLabels.join(", ")}</p>
@@ -498,7 +485,7 @@
               }
             }
 
-            selectedTimeInput.value = selectedTimeIds.join(","); // Save only IDs into hidden input
+            selectedTimeInput.value = selectedTimeIds.join(",");
           });
 
           timeButtonsDiv.appendChild(button);
@@ -511,8 +498,8 @@
 
       paxSelect.addEventListener("change", function () {
         reloadDateOptions();
-        timeButtonsDiv.innerHTML = ""; // Clear time buttons when pax changed
-        selectedTimeInput.value = ""; // Clear selected time
+        timeButtonsDiv.innerHTML = "";
+        selectedTimeInput.value = "";
       });
 
       document
@@ -532,7 +519,6 @@
           bookingSlot();
         });
 
-      // Initialize
       [1, 2, 3, 4, 5, 6].forEach((p) => {
         const option = document.createElement("option");
         option.value = p;
@@ -608,7 +594,6 @@
         const otpStatus = document.getElementById("otpStatus");
         const otpField = document.getElementById("otpField");
         const userName = document.getElementById("name");
-        const userEmail = document.getElementById("email");
         const phoneInput = document.getElementById("phone");
 
         if (!phone || !code) {
@@ -630,14 +615,11 @@
               if (data.user != null) {
                 userName.value = data.user.name;
                 userName.disabled = true;
-                userEmail.value = data.user.email;
-                userEmail.disabled = true;
               }
               phoneInput.disabled = true;
               localStorage.setItem("phone_verified", normalizePhone(phone));
               otpField.style.display = "none";
               otpStatus.innerText = "Phone number verified.";
-              otpStatus.style.color = "green";
               otpStatus.style.color = "green";
               window.phoneVerified = true;
             } else {
@@ -654,7 +636,7 @@
       }
 
       function normalizePhone(phone) {
-        phone = phone.trim().replace(/^0/, ""); // remove leading 0
+        phone = phone.trim().replace(/^0/, "");
         return "60" + phone;
       }
 

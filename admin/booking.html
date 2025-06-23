@@ -154,7 +154,6 @@
             <!-- Booking info injected dynamically here -->
             <div id="bookingInfo"></div>
             <!-- Review Section -->
-            <!-- Review Section -->
             <div class="mt-3" id="reviewSection">
               <label for="adminReview" class="form-label">
                 <strong>Admin Review:</strong>
@@ -346,8 +345,6 @@
               <div id="manualUserInfoMsg" class="alert alert-info"></div>
               <label for="manualName" class="form-label">Name:</label>
               <input type="text" id="manualName" class="form-control mb-2" />
-              <label for="manualEmail" class="form-label">Email:</label>
-              <input type="email" id="manualEmail" class="form-control mb-2" />
               <button
                 class="btn btn-success"
                 id="manualConfirmNewBtn"
@@ -648,7 +645,6 @@
                 <p><strong>Booking Number:</strong> ${bookingNumber}</p>
                 <p><strong>Name:</strong> ${booking.name}</p>
                 <p><strong>Phone:</strong> +${booking.phone_number}</p>
-                <p><strong>Email:</strong> ${booking.email}</p>
                 <p><strong>Pax:</strong> ${booking.pax_number}</p>
                 <p><strong>Date:</strong> ${formatLongDate(booking.date)}</p>
                 <p><strong>Timeslots:</strong> ${booking.timeslots.join(
@@ -757,7 +753,7 @@
                             item.timeslots.length > 0
                               ? item.timeslots.join(", ")
                               : "-"
-                          }</td> <!-- 🆕 Timeslots -->
+                          }</td>
                           <td>${item.created_date}</td>
                           </tr>
                       `);
@@ -981,7 +977,6 @@
         const userNewDiv = document.getElementById("manualUserNew");
         const userInfoMsg = document.getElementById("manualUserInfoMsg");
         const nameInput = document.getElementById("manualName");
-        const emailInput = document.getElementById("manualEmail");
 
         if (!phone) {
           statusDiv.textContent = "Phone number is required.";
@@ -1008,15 +1003,13 @@
               userInfoMsg.className = "alert alert-success";
               userInfoMsg.textContent = "User found. ";
               nameInput.disabled = true;
-              emailInput.disabled = true;
               nameInput.value = response.name || "";
-              emailInput.value = response.email || "";
             } else {
               manualUserId = null;
               userInfoMsg.className = "alert alert-info";
               userInfoMsg.textContent = "New user. Please provide details:";
               nameInput.value = "";
-              emailInput.value = "";
+              nameInput.disabled = false;
             }
           },
           error: function (xhr, status, error) {
@@ -1029,26 +1022,25 @@
       function confirmManualBooking() {
         const phone = document.getElementById("manualPhone").value.trim();
         const name = document.getElementById("manualName")?.value.trim();
-        const email = document.getElementById("manualEmail")?.value.trim();
         const statusDiv = document.getElementById("manualRegisterStatus");
 
         if (!phone) {
           statusDiv.textContent = "Phone number is required.";
           return;
         }
-        if (!name || !email) {
+        if (!name) {
           statusDiv.textContent = "Please provide all details.";
           return;
         }
 
         // If user exists, just book the slot
         if (manualUserId) {
-          bookSlotForExistingUser(phone, name, email);
+          bookSlotForExistingUser(phone, name);
           return;
         }
 
         // For new users, validate and register
-        const userData = { phone, name, email };
+        const userData = { phone, name };
 
         $.ajax({
           url: "../api/api.php?action=register_user",
@@ -1070,7 +1062,7 @@
         });
       }
 
-      function bookSlotForExistingUser(phone, name, email) {
+      function bookSlotForExistingUser(phone, name) {
         const slotId = currentSlotId;
         $.ajax({
           url: "../api/api.php?action=book_slot",
@@ -1080,7 +1072,6 @@
             phone: phone,
             user_id: manualUserId,
             name: name,
-            email: email,
           },
           success: function (response) {
             if (response.success) {
@@ -1101,7 +1092,7 @@
       }
 
       function bookSlotForNewUser(userId, phone) {
-        const slotId = currentSlotId; // This should be set when opening the manual register modal
+        const slotId = currentSlotId;
         $.ajax({
           url: "../api/api.php?action=book_slot",
           method: "POST",
@@ -1128,7 +1119,6 @@
         currentSlotId = slotId;
         document.getElementById("manualPhone").value = "";
         document.getElementById("manualName").value = "";
-        document.getElementById("manualEmail").value = "";
         document.getElementById("manualRegisterStatus").textContent = "";
         document.getElementById("manualUserNew").style.display = "none";
         document.getElementById("manualPhone").disabled = false;

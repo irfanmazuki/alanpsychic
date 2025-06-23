@@ -431,11 +431,10 @@ function getBookingSlots($conn) {
   function submitBooking($conn) {
     $name = $_POST['name'] ?? '';
     $phone = $_POST['phone'] ?? '';
-    $email = $_POST['email'] ?? '';
     $pax = intval($_POST['pax'] ?? 1);
     $timeslotIds = $_POST['timeslot_ids'] ?? [];
 
-    if (!$name || !$phone || !$email || empty($timeslotIds)) {
+    if (!$name || !$phone || empty($timeslotIds)) {
         echo json_encode(["success" => false, "message" => "Missing booking data."]);
         return;
     }
@@ -453,8 +452,8 @@ function getBookingSlots($conn) {
             $userRow = $resultUser->fetch_assoc();
             $userId = $userRow['id'];
         } else {
-            $stmtNewUser = $conn->prepare("INSERT INTO users (phone_number, name, email, isBlacklisted) VALUES (?, ?, ?, 0)");
-            $stmtNewUser->bind_param("sss", $phone, $name, $email);
+            $stmtNewUser = $conn->prepare("INSERT INTO users (phone_number, name, isBlacklisted) VALUES (?, ?, 0)");
+            $stmtNewUser->bind_param("ss", $phone, $name);
             $stmtNewUser->execute();
             $userId = $stmtNewUser->insert_id;
         }
@@ -478,10 +477,10 @@ function getBookingSlots($conn) {
 
         // ✅ Step 4: Insert into booking table
         $stmtBooking = $conn->prepare("
-            INSERT INTO booking (user_id, name, phone_number, email, pax_number, booking_number, created_date, isCancelled)
-            VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)
+            INSERT INTO booking (user_id, name, phone_number, pax_number, booking_number, created_date, isCancelled)
+            VALUES (?, ?, ?, ?, ?, NOW(), 0)
         ");
-        $stmtBooking->bind_param("isssis", $userId, $name, $phone, $email, $pax, $bookingNumber);
+        $stmtBooking->bind_param("issis", $userId, $name, $phone, $pax, $bookingNumber);
         $stmtBooking->execute();
         $bookingId = $stmtBooking->insert_id;
 
@@ -543,7 +542,7 @@ function getBookingSlots($conn) {
     }
   
     // Fetch booking main info
-    $stmt = $conn->prepare("SELECT id, name, phone_number, email, pax_number, created_date, isCancelled, review, ws_count, calendar_count FROM booking WHERE booking_number = ?");
+    $stmt = $conn->prepare("SELECT id, name, phone_number, pax_number, created_date, isCancelled, review, ws_count, calendar_count FROM booking WHERE booking_number = ?");
     $stmt->bind_param("s", $bookingNumber);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -747,7 +746,6 @@ function getBookingSlots($conn) {
         "id" => $row['id'],
         "phone_number" => $row['phone_number'],
         "name" => $row['name'],
-        "email" => $row['email'],
         "isBlacklisted" => $row['isBlacklisted'],
         "bookings" => $bookings
       ];
@@ -872,22 +870,20 @@ function getBookingSlots($conn) {
 
     $phone = '6'.$phone;
     
-    $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE phone_number = ?");
+    $stmt = $conn->prepare("SELECT id, name FROM users WHERE phone_number = ?");
     $stmt->bind_param("s", $phone);
     $stmt->execute();
     $stmt->store_result();
 
     $user_id = null;
     $name = null;
-    $email = null;
     if ($stmt->num_rows > 0) {
-      $stmt->bind_result($user_id, $name, $email);
+      $stmt->bind_result($user_id, $name);
       $stmt->fetch();
       echo json_encode([
         'exists' => true,
         'user_id' => $user_id,
-        'name' => $name,
-        'email' => $email
+        'name' => $name
       ]);
     } else {
       echo json_encode(['exists' => false]);
@@ -897,17 +893,16 @@ function getBookingSlots($conn) {
   function registerUser($conn) {
     $phone = $_POST['phone'] ?? '';
     $name = $_POST['name'] ?? '';
-    $email = $_POST['email'] ?? '';
 
-    if (!$phone || !$name || !$email) {
+    if (!$phone || !$name) {
         echo json_encode(['success' => false, 'message' => 'All fields are required.']);
         return;
     }
 
     // Insert new user
     $phone = '6'.$phone;
-    $stmt = $conn->prepare("INSERT INTO users (phone_number, name, email, isBlacklisted) VALUES (?, ?, ?, 0)");
-    $stmt->bind_param("sss", $phone, $name, $email);
+    $stmt = $conn->prepare("INSERT INTO users (phone_number, name, isBlacklisted) VALUES (?, ?, 0)");
+    $stmt->bind_param("ss", $phone, $name);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'userId' => $stmt->insert_id]);
@@ -920,6 +915,7 @@ function getBookingSlots($conn) {
     $slotId = $_POST['slot_id'] ?? null;
     $phone = $_POST['phone'] ?? null;
     $userId = $_POST['user_id'] ?? null;
+    $name = $_POST['name'] ?? null;
 
     if (!$slotId || !$phone) {
         echo json_encode(['success' => false, 'message' => 'Missing slot or phone.']);
@@ -941,21 +937,26 @@ function getBookingSlots($conn) {
     $bookingNumber = generateBookingNumber();
 
     // Get user info
-    $stmt = $conn->prepare("SELECT name, email FROM users WHERE id = ?");
+    $stmt = $conn->prepare("SELECT name FROM users WHERE id = ?");
     $stmt->bind_param("i", $userId);
     $stmt->execute();
-    $stmt->bind_result($name, $email);
+    $stmt->bind_result($dbName);
     if (!$stmt->fetch()) {
         echo json_encode(['success' => false, 'message' => 'User info not found.']);
         return;
     }
     $stmt->close();
 
+    // Use provided name if given (for manual booking update)
+    if ($name) {
+        $dbName = $name;
+    }
+
     $conn->begin_transaction();
     try {
         // Insert booking
-        $stmt = $conn->prepare("INSERT INTO booking (user_id, name, phone_number, email, pax_number, booking_number, created_date, isCancelled) VALUES (?, ?, ?, ?, 1, ?, NOW(), 0)");
-        $stmt->bind_param("issss", $userId, $name, $phone, $email, $bookingNumber);
+        $stmt = $conn->prepare("INSERT INTO booking (user_id, name, phone_number, pax_number, booking_number, created_date, isCancelled) VALUES (?, ?, ?, 1, ?, NOW(), 0)");
+        $stmt->bind_param("isss", $userId, $dbName, $phone, $bookingNumber);
         $stmt->execute();
         $bookingId = $stmt->insert_id;
 
