@@ -73,6 +73,40 @@
         box-sizing: border-box;
       }
 
+      .services-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+
+      .service-card {
+        flex: 1 1 200px;
+        min-width: 180px;
+        background: #f7fafc;
+        border-radius: 10px;
+        padding: 18px 10px;
+        box-shadow: 0 2px 8px #e0e0e0;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .service-icon {
+        font-size: 2em;
+        color: #0abab5;
+      }
+
+      .service-title {
+        font-weight: bold;
+      }
+
+      .service-desc {
+        color: #888;
+        font-size: 0.95em;
+      }
+
       @media (max-width: 600px) {
         h1 {
           font-size: 1.5em;
@@ -83,6 +117,13 @@
         }
       }
     </style>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css"
+      integrity="sha512-5A8nwdMOWrSz20fDsjczgUidUBR8liPYU+WymTZP1lmY9G6Oc7HlZv156XqnsgNUzTyMefFTcsFH/tnJE/+xBg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
   </head>
   <body>
     <div class="home-container">
@@ -132,41 +173,141 @@
         </button>
         <div style="margin-top: 40px; text-align: left">
           <h3 style="color: #0abab5; text-align: center">Services Offered</h3>
-          <ul style="list-style: none; padding: 0; line-height: 1.8">
-            <li><strong>Business Reading</strong> – 生意解答</li>
-            <li><strong>Family & Personal Reading</strong> – 家庭或个人疑问</li>
-            <li><strong>Feng Shui Reading</strong> – 风水</li>
-            <li><strong>Awakening Reading</strong> – 迷津指点</li>
-            <li><strong>Future Reading</strong> – 未来指引</li>
-            <li><strong>Sickness Reading</strong> – 病况</li>
-            <li><strong>Statue Reading</strong> – 开光佛像</li>
-            <li><strong>Soul Messengers Reading</strong> – 通灵（交代遗言）</li>
-          </ul>
+          <div class="services-list">
+            <div class="service-card">
+              <span class="service-icon">💼</span>
+              <div>
+                <div class="service-title">Business Reading</div>
+                <div class="service-desc">生意解答</div>
+              </div>
+            </div>
+            <div class="service-card">
+              <span class="service-icon">🏠</span>
+              <div>
+                <div class="service-title">Family & Personal Reading</div>
+                <div class="service-desc">家庭或个人疑问</div>
+              </div>
+            </div>
+            <div class="service-card">
+              <span class="service-icon">🧭</span>
+              <div>
+                <div class="service-title">Feng Shui Reading</div>
+                <div class="service-desc">风水</div>
+              </div>
+            </div>
+            <div class="service-card">
+              <span class="service-icon">🌄</span>
+              <div>
+                <div class="service-title">Awakening Reading</div>
+                <div class="service-desc">迷津指点</div>
+              </div>
+            </div>
+            <div class="service-card">
+              <span class="service-icon">🔮</span>
+              <div>
+                <div class="service-title">Future Reading</div>
+                <div class="service-desc">未来指引</div>
+              </div>
+            </div>
+            <div class="service-card">
+              <span class="service-icon">🩺</span>
+              <div>
+                <div class="service-title">Sickness Reading</div>
+                <div class="service-desc">病况</div>
+              </div>
+            </div>
+            <div class="service-card">
+              <span class="service-icon">🗿</span>
+              <div>
+                <div class="service-title">Statue Reading</div>
+                <div class="service-desc">开光佛像</div>
+              </div>
+            </div>
+            <div class="service-card">
+              <span class="service-icon">👻</span>
+              <div>
+                <div class="service-title">Soul Messengers Reading</div>
+                <div class="service-desc">通灵（交代遗言）</div>
+              </div>
+            </div>
+          </div>
 
-          <p style="margin-top: 20px; font-weight: bold; color: #333">
-            Contact for details:
-            <br /><a
-              href="https://api.whatsapp.com/send?phone=60133235321"
-              style="color: #0abab5; font-size: 1.2em"
-              >+6013-323 5321</a
+          <div
+            style="
+              margin-top: 30px;
+              background: #f7fafc;
+              border-radius: 12px;
+              box-shadow: 0 2px 10px #e0e0e0;
+              padding: 24px 18px;
+              max-width: 420px;
+              margin-left: auto;
+              margin-right: auto;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 12px;
+              "
             >
-          </p>
-
-          <p style="margin-top: 10px; color: #555">
-            <strong>Address:</strong><br />
-            No: RK23, Jalan Villa 3, Anggerik Villa<br />
-            43500 Kajang Semenyih
-          </p>
-
-          <p style="margin-top: 10px; color: #555">
-            Waze/Google:
-            <strong
-              ><a
-                href="https://maps.app.goo.gl/HE71ofKQH2ViJrmP8?g_st=com.google.maps.preview.copy"
-                >Alan Psychic Reading (Shanik Enteprise)</a
-              ></strong
+              <span style="font-size: 2em; color: #25d366"
+                ><i class="fa fa-whatsapp"></i
+              ></span>
+              <div>
+                <div style="font-weight: bold; color: #222; font-size: 1.1em">
+                  Contact for details:
+                </div>
+                <a
+                  href="https://api.whatsapp.com/send?phone=60133235321"
+                  style="
+                    color: #0abab5;
+                    font-size: 1.25em;
+                    font-weight: bold;
+                    text-decoration: none;
+                  "
+                  target="_blank"
+                  ><i class="fa fa-phone"></i> +6013-323 5321</a
+                >
+              </div>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                margin-bottom: 10px;
+              "
             >
-          </p>
+              <span style="font-size: 1.7em; color: #4285f4"
+                ><i class="fa fa-map-marker"></i
+              ></span>
+              <div style="color: #555">
+                <strong>Address:</strong><br />
+                No: RK23, Jalan Villa 3, Anggerik Villa<br />
+                43500 Kajang Semenyih
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px">
+              <span style="font-size: 1.7em; color: #34a853"
+                ><i class="fa fa-location-arrow"></i
+              ></span>
+              <div style="color: #555">
+                <strong>Waze/Google:</strong>
+                <a
+                  href="https://maps.app.goo.gl/HE71ofKQH2ViJrmP8?g_st=com.google.maps.preview.copy"
+                  style="
+                    color: #0abab5;
+                    font-weight: bold;
+                    text-decoration: underline;
+                  "
+                  target="_blank"
+                  >Alan Psychic Reading (Shanik Enteprise)</a
+                >
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
