@@ -627,18 +627,19 @@
           .then((res) => res.json())
           .then((data) => {
             if (data.success) {
+              if (data.user != null) {
+                userName.value = data.user.name;
+                userName.disabled = true;
+                userEmail.value = data.user.email;
+                userEmail.disabled = true;
+              }
+              phoneInput.disabled = true;
               localStorage.setItem("phone_verified", normalizePhone(phone));
               otpField.style.display = "none";
               otpStatus.innerText = "Phone number verified.";
               otpStatus.style.color = "green";
               otpStatus.style.color = "green";
               window.phoneVerified = true;
-
-              userName.value = data.user.name;
-              userName.disabled = true;
-              userEmail.value = data.user.email;
-              userEmail.disabled = true;
-              phoneInput.disabled = true;
             } else {
               otpStatus.innerText = data.message;
               otpStatus.style.color = "red";
