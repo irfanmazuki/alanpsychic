@@ -675,7 +675,7 @@
                 modalContent += `
                   <button class="btn btn-danger mt-2" onclick="adminCancelBooking('${bookingNumber}')"><i class="fa fa-ban" aria-hidden="true"></i> Cancel This Booking</button>
                   <button class="btn btn-success mt-2" onclick="whatsapp(${booking.id}, '${booking.phone_number}')"><i class="fa fa-whatsapp" aria-hidden="true"></i> Whatsapp Customer (${booking.ws_count})</button>
-                  <button class="btn btn-secondary mt-2" onclick="saveGoogleCalendar(${booking.id}, '${booking.name}', '${booking.date}', '${booking.timeslots[0]}', ${booking.timeslots.length})"><i class="fa fa-calendar" aria-hidden="true"></i> Save to calendar (${booking.calendar_count})</button>
+                  <button class="btn btn-secondary mt-2" onclick="saveGoogleCalendar(${booking.id}, '${booking.name}', '${booking.date}', '${booking.timeslots[0]}', ${booking.timeslots.length}, ${booking.pax_number}, '${booking.phone_number}')"><i class="fa fa-calendar" aria-hidden="true"></i> Save to calendar (${booking.calendar_count})</button>
                   `;
               }
 
@@ -826,12 +826,24 @@
         });
       });
 
-      function saveGoogleCalendar(bookingId, name, date, startTime, hours) {
+      function saveGoogleCalendar(
+        bookingId,
+        name,
+        date,
+        startTime,
+        hours,
+        pax,
+        phone_number
+      ) {
         increaseCounter(bookingId, "calendar");
         var endTime = addHoursToTime(startTime, hours);
         var url =
           "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" +
           name.replace(/ /g, "+") +
+          " " +
+          pax +
+          " pax " +
+          phone_number +
           "+Appointment+Time+" +
           startTime +
           "&dates=" +
