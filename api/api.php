@@ -681,7 +681,7 @@ function getBookingSlots($conn) {
   }
   
   function getUsersList($conn) {
-    $sql = "SELECT * FROM users ORDER BY id ASC";
+    $sql = "SELECT * FROM users ORDER BY id DESC";
     $result = $conn->query($sql);
     $users = [];
   
