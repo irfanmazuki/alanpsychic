@@ -840,24 +840,31 @@ function getBookingSlots($conn) {
   function checkUserExists($conn) {
     $phone = $_POST['phone'] ?? '';
     if (!$phone) {
-        echo json_encode(['exists' => false, 'message' => 'Phone number required.']);
-        return;
+      echo json_encode(['exists' => false, 'message' => 'Phone number required.']);
+      return;
     }
 
     $phone = '6'.$phone;
     
-    $stmt = $conn->prepare("SELECT id FROM users WHERE phone_number = ?");
+    $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE phone_number = ?");
     $stmt->bind_param("s", $phone);
     $stmt->execute();
     $stmt->store_result();
 
     $user_id = null;
+    $name = null;
+    $email = null;
     if ($stmt->num_rows > 0) {
-        $stmt->bind_result($user_id);
-        $stmt->fetch();
-        echo json_encode(['exists' => true, 'user_id' => $user_id]);
+      $stmt->bind_result($user_id, $name, $email);
+      $stmt->fetch();
+      echo json_encode([
+        'exists' => true,
+        'user_id' => $user_id,
+        'name' => $name,
+        'email' => $email
+      ]);
     } else {
-        echo json_encode(['exists' => false]);
+      echo json_encode(['exists' => false]);
     }
   }
   

@@ -335,56 +335,35 @@
             ></button>
           </div>
           <div class="modal-body">
-            <div id="manualRegisterStep1">
-              <label for="manualPhone" class="form-label">Phone Number:</label>
-              <input
-                type="text"
-                id="manualPhone"
-                class="form-control mb-2"
-                placeholder="e.g. 0123456789"
-              />
-              <div id="manualRegisterStatus" class="text-danger mb-2"></div>
+            <label for="manualPhone" class="form-label">Phone Number:</label>
+            <input
+              type="text"
+              id="manualPhone"
+              class="form-control mb-2"
+              placeholder="e.g. 0123456789"
+            />
+            <div id="manualRegisterStatus" class="text-danger mb-2"></div>
+            <button
+              class="btn btn-primary mb-2"
+              id="manualCheckPhoneBtn"
+              onclick="checkManualPhone()"
+            >
+              Check
+            </button>
+            <!-- Only one div for both existing and new user -->
+            <div id="manualUserNew" style="display: none">
+              <div id="manualUserInfoMsg" class="alert alert-info"></div>
+              <label for="manualName" class="form-label">Name:</label>
+              <input type="text" id="manualName" class="form-control mb-2" />
+              <label for="manualEmail" class="form-label">Email:</label>
+              <input type="email" id="manualEmail" class="form-control mb-2" />
               <button
-                class="btn btn-primary mb-2"
-                id="manualCheckPhoneBtn"
-                onclick="checkManualPhone()"
+                class="btn btn-success"
+                id="manualConfirmNewBtn"
+                onclick="confirmManualBooking()"
               >
-                Check
+                Confirm Booking
               </button>
-            </div>
-            <div id="manualRegisterStep2" style="display: none">
-              <div id="manualUserExists" style="display: none">
-                <div class="alert alert-success">
-                  User found. Proceed with booking?
-                </div>
-                <button
-                  class="btn btn-success"
-                  id="manualConfirmExistingBtn"
-                  onclick="confirmManualBooking()"
-                >
-                  Confirm Booking
-                </button>
-              </div>
-              <div id="manualUserNew" style="display: none">
-                <div class="alert alert-info">
-                  New user. Please provide details:
-                </div>
-                <label for="manualName" class="form-label">Name:</label>
-                <input type="text" id="manualName" class="form-control mb-2" />
-                <label for="manualEmail" class="form-label">Email:</label>
-                <input
-                  type="email"
-                  id="manualEmail"
-                  class="form-control mb-2"
-                />
-                <button
-                  class="btn btn-success"
-                  id="manualConfirmNewBtn"
-                  onclick="confirmManualBooking()"
-                >
-                  Confirm Booking
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -908,6 +887,10 @@
         const phone = document.getElementById("manualPhone").value.trim();
         const phoneInput = document.getElementById("manualPhone");
         const statusDiv = document.getElementById("manualRegisterStatus");
+        const userNewDiv = document.getElementById("manualUserNew");
+        const userInfoMsg = document.getElementById("manualUserInfoMsg");
+        const nameInput = document.getElementById("manualName");
+        const emailInput = document.getElementById("manualEmail");
 
         if (!phone) {
           statusDiv.textContent = "Phone number is required.";
@@ -922,25 +905,27 @@
         } else {
           statusDiv.textContent = "";
         }
-        console.log(phone);
         $.ajax({
           url: "../api/api.php?action=check_user_exists",
           method: "POST",
           data: { phone: phone },
           success: function (response) {
             phoneInput.disabled = true;
-            document.getElementById("manualRegisterStep2").style.display =
-              "block";
+            userNewDiv.style.display = "block";
             if (response.exists) {
-              manualUserId = response.user_id || null; // Store user_id if returned
-              document.getElementById("manualUserExists").style.display =
-                "block";
-              document.getElementById("manualUserNew").style.display = "none";
+              manualUserId = response.user_id || null;
+              userInfoMsg.className = "alert alert-success";
+              userInfoMsg.textContent = "User found. ";
+              nameInput.disabled = true;
+              emailInput.disabled = true;
+              nameInput.value = response.name || "";
+              emailInput.value = response.email || "";
             } else {
               manualUserId = null;
-              document.getElementById("manualUserExists").style.display =
-                "none";
-              document.getElementById("manualUserNew").style.display = "block";
+              userInfoMsg.className = "alert alert-info";
+              userInfoMsg.textContent = "New user. Please provide details:";
+              nameInput.value = "";
+              emailInput.value = "";
             }
           },
           error: function (xhr, status, error) {
@@ -960,21 +945,18 @@
           statusDiv.textContent = "Phone number is required.";
           return;
         }
-
-        // For existing users, just book the slot
-        if (
-          document.getElementById("manualUserExists").style.display !== "none"
-        ) {
-          bookSlotForExistingUser(phone);
-          return;
-        }
-
-        // For new users, validate and register
         if (!name || !email) {
           statusDiv.textContent = "Please provide all details.";
           return;
         }
 
+        // If user exists, just book the slot
+        if (manualUserId) {
+          bookSlotForExistingUser(phone, name, email);
+          return;
+        }
+
+        // For new users, validate and register
         const userData = { phone, name, email };
 
         $.ajax({
@@ -997,12 +979,18 @@
         });
       }
 
-      function bookSlotForExistingUser(phone) {
+      function bookSlotForExistingUser(phone, name, email) {
         const slotId = currentSlotId;
         $.ajax({
           url: "../api/api.php?action=book_slot",
           method: "POST",
-          data: { slot_id: slotId, phone: phone, user_id: manualUserId }, // Pass user_id
+          data: {
+            slot_id: slotId,
+            phone: phone,
+            user_id: manualUserId,
+            name: name,
+            email: email,
+          },
           success: function (response) {
             if (response.success) {
               alert("Slot booked successfully!");
@@ -1046,14 +1034,14 @@
       }
 
       function openManualRegisterModal(slotId, date, time) {
-        currentSlotId = slotId; // Set the current slot ID
+        currentSlotId = slotId;
         document.getElementById("manualPhone").value = "";
         document.getElementById("manualName").value = "";
         document.getElementById("manualEmail").value = "";
         document.getElementById("manualRegisterStatus").textContent = "";
-        document.getElementById("manualUserExists").style.display = "none";
         document.getElementById("manualUserNew").style.display = "none";
-
+        document.getElementById("manualPhone").disabled = false;
+        manualUserId = null;
         const modal = new bootstrap.Modal(
           document.getElementById("manualRegisterModal")
         );
