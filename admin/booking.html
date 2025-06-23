@@ -345,7 +345,7 @@
               />
               <div id="manualRegisterStatus" class="text-danger mb-2"></div>
               <button
-                class="btn btn-primary"
+                class="btn btn-primary mb-2"
                 id="manualCheckPhoneBtn"
                 onclick="checkManualPhone()"
               >
@@ -906,6 +906,7 @@
 
       function checkManualPhone() {
         const phone = document.getElementById("manualPhone").value.trim();
+        const phoneInput = document.getElementById("manualPhone");
         const statusDiv = document.getElementById("manualRegisterStatus");
 
         if (!phone) {
@@ -913,11 +914,13 @@
           return;
         }
 
-        const phoneRegex = /^[0-9]{10,11}$/;
+        const phoneRegex = /^0[0-9]{9,10}$/;
         if (!phoneRegex.test(phone)) {
           statusDiv.textContent =
             "Invalid phone number format not including country code.";
           return;
+        } else {
+          statusDiv.textContent = "";
         }
         console.log(phone);
         $.ajax({
@@ -925,6 +928,7 @@
           method: "POST",
           data: { phone: phone },
           success: function (response) {
+            phoneInput.disabled = true;
             document.getElementById("manualRegisterStep2").style.display =
               "block";
             if (response.exists) {

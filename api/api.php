@@ -872,6 +872,7 @@ function getBookingSlots($conn) {
     }
 
     // Insert new user
+    $phone = '6'.$phone;
     $stmt = $conn->prepare("INSERT INTO users (phone_number, name, email, isBlacklisted) VALUES (?, ?, ?, 0)");
     $stmt->bind_param("sss", $phone, $name, $email);
 
