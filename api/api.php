@@ -923,6 +923,8 @@ function getBookingSlots($conn) {
         return;
     }
 
+    $phone = '6'.$phone;
+
     // Check if slot is available
     $stmt = $conn->prepare("SELECT availability FROM timeslots WHERE id = ?");
     $stmt->bind_param("i", $slotId);
