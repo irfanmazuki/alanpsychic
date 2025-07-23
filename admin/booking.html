@@ -642,7 +642,8 @@
 
           const row = `
             <tr class="${stripeClass}">
-            <td>${formatLongDate(slot.date)}</td>
+            <td><span style="display:none">${slot.date}</span>
+              ${formatLongDate(slot.date)}</td>
             <td>${slot.time}</td>
             <td>
                 ${statusCheckbox}
