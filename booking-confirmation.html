@@ -144,6 +144,7 @@
                 const name = booking.name;
                 const date = booking.date;
                 const phone_number = booking.phone_number;
+                const slots = booking.timeslots.join(", ");
 
                 $("#confirmationContent").html(`
           <h2>Booking Confirmed!</h2>
@@ -178,8 +179,9 @@
     </button>
   </div>
   <div class="col-md-4 col-12 d-grid">
-    <button class="btn btn-danger mb-2" onclick="cancelBooking('${bookingNumber}')">
-      <i class="fa-solid fa-ban"></i> Cancel Booking
+    <button class="btn btn-danger mb-2"
+      onclick="sendWhatsappCancel('${bookingNumber}', '${name}', '${date}', '${slots}', ${pax})">
+      <i class="fa-brands fa-whatsapp"></i> Cancel Booking
     </button>
   </div>
   <div class="col-md-4 col-12 d-grid">
@@ -231,6 +233,28 @@
             alert("Error occurred while cancelling booking.");
           },
         });
+      }
+
+      function sendWhatsappCancel(bookingNumber, name, date, timeslots, pax) {
+        // Format the message as requested
+        const message =
+          `Booking Cancellation Request\n\n` +
+          `Booking Number: ${bookingNumber}\n` +
+          `Date: ${date}\n` +
+          `Slot: ${timeslots}\n` +
+          `Name: ${name}\n` +
+          `Pax: ${pax}\n\n` +
+          `Hi Alan, I would like to cancel this booking.`;
+
+        // Replace with Alan's WhatsApp number (example: 60123456789)
+        const alanPhone = "60133235321";
+        const url =
+          "https://api.whatsapp.com/send?phone=" +
+          alanPhone +
+          "&text=" +
+          encodeURIComponent(message);
+
+        window.open(url, "_blank");
       }
     </script>
   </body>
