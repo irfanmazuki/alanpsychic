@@ -356,8 +356,8 @@
           const option = document.createElement("option");
           option.value = day.date;
           option.textContent = hasConsecutive
-            ? day.date
-            : `${day.date} (Fully booked)`;
+            ? formatLongDate(day.date)
+            : `${formatLongDate(day.date)} (Fully booked)`;
           if (!hasConsecutive) {
             option.disabled = true;
             option.style.color = "gray";
@@ -488,6 +488,38 @@
       function normalizePhone(phone) {
         phone = phone.trim().replace(/^0/, "");
         return "60" + phone;
+      }
+
+      function formatLongDate(dateStr) {
+        // dateStr should be in YYYY-MM-DD format
+        const d = new Date(dateStr.replace(/-/g, "/"));
+        if (isNaN(d)) return dateStr;
+        const days = [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ];
+        const months = [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
+        ];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} (${
+          days[d.getDay()]
+        })`;
       }
     </script>
   </body>
