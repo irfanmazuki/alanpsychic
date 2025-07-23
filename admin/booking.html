@@ -146,6 +146,47 @@
       </table>
     </div>
 
+    <div class="modal fade" id="remarkModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Add/Edit Remark</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <textarea
+              id="remarkInput"
+              class="form-control"
+              rows="4"
+              placeholder="Enter remark here..."
+            ></textarea>
+            <div id="remarkStatus" class="text-danger mt-2"></div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="submitRemark()"
+            >
+              Save Remark
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal fade" id="bookingModal" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -428,6 +469,45 @@
       var currentBookingNumber = null; // set this when opening modal
       var messageText = "";
       let manualUserId = null; // Add this at the top with other globals
+      let currentBookingId = null;
+
+      function openRemarkPopup(bookingId, currentRemark) {
+        currentBookingId = bookingId;
+        $("#remarkInput").val(currentRemark || "");
+        $("#remarkStatus").text("");
+        const modal = new bootstrap.Modal(
+          document.getElementById("remarkModal")
+        );
+        modal.show();
+      }
+
+      function submitRemark() {
+        const remark = $("#remarkInput").val().trim();
+        if (remark.length > 255) {
+          $("#remarkStatus").text("Remark too long (max 255 characters).");
+          return;
+        }
+        $.ajax({
+          url: "../api/api.php?action=update_remark",
+          method: "POST",
+          data: { id: currentBookingId, remark: remark },
+          success: function (response) {
+            if (response.success) {
+              bootstrap.Modal.getInstance(
+                document.getElementById("remarkModal")
+              ).hide();
+              loadSlots();
+            } else {
+              $("#remarkStatus").text(
+                response.message || "Failed to update remark."
+              );
+            }
+          },
+          error: function () {
+            $("#remarkStatus").text("Error updating remark.");
+          },
+        });
+      }
 
       function loadSlots() {
         $.ajax({
@@ -640,6 +720,18 @@
             >
           `;
 
+          var remarkIcon = `
+            <span style="cursor:pointer;color:#0abab5;" onclick="openRemarkPopup(${
+              slot.booking_id
+            }, '${slot.remark ? slot.remark.replace(/'/g, "\\'") : ""}')">
+              <i class="fa fa-commenting-o"></i> Add Remark
+            </span>
+          `;
+
+          if (slot.booking_id == null || slot.booking_id == 0) {
+            remarkIcon = "";
+          }
+
           const row = `
             <tr class="${stripeClass}">
             <td><span style="display:none">${slot.date}</span>
@@ -665,7 +757,16 @@
                 ${slot.name ? slot.name : "-"}
             </td>
             <td>
-                ${createdAt}
+              ${
+                slot.remark && slot.remark.trim()
+                  ? `<span>${slot.remark}</span>
+             <button class="btn btn-link btn-sm p-0 ms-2" title="Edit Remark" onclick="openRemarkPopup(${
+               slot.booking_id
+             }, '${slot.remark.replace(/'/g, "\\'")}')">
+               <i class="fa fa-pencil"></i>
+             </button>`
+                  : remarkIcon
+              }
             </td>
             <td>
                 ${

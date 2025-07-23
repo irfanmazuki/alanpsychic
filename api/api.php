@@ -84,12 +84,35 @@ switch ($action) {
     case 'update_is_shown':
       updateIsShown($conn);
       break;
+    case 'update_remark':
+      updateRemark($conn);
+      break;
     default:
       echo json_encode(["error" => "No valid action provided."]);
       break;
 }
 
 $conn->close();
+
+function updateRemark($conn) {
+    $bookingId = $_POST['id'] ?? null; // Now expects booking id
+    $remark = $_POST['remark'] ?? '';
+
+    if (!$bookingId) {
+        echo json_encode(['success' => false, 'message' => 'Missing booking ID.']);
+        return;
+    }
+
+    $stmt = $conn->prepare("UPDATE booking SET remark = ? WHERE id = ?");
+    $stmt->bind_param("si", $remark, $bookingId);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => $stmt->error]);
+    }
+    $stmt->close();
+}
 
 function submitReview($conn) {
   $bookingNumber = $_POST['booking_number'] ?? '';
@@ -130,6 +153,8 @@ function getTimeslots($conn) {
             t.time,
             t.availability,
             t.IsShown,
+            b.remark,
+            b.id AS booking_id,
             b.ws_count,
             b.calendar_count,
             b.booking_number,
@@ -139,7 +164,7 @@ function getTimeslots($conn) {
         FROM 
             timeslots t
         LEFT JOIN (
-            SELECT bs.timeslot_id, b.booking_number, b.user_id, b.name, b.ws_count, b.calendar_count, b.created_date
+            SELECT bs.timeslot_id, b.booking_number, b.remark, b.id, b.user_id, b.name, b.ws_count, b.calendar_count, b.created_date
             FROM booking_slot bs
             JOIN booking b ON bs.booking_id = b.id
             WHERE b.isCancelled = 0
@@ -167,7 +192,9 @@ function getTimeslots($conn) {
         "name" => $row['name'],
         "ws_count" => $row['ws_count'] ?? 0,
         "calendar_count" => $row['calendar_count'] ?? 0,
-        "created_date" => $row['created_date'] ?? null // <-- add this
+        "created_date" => $row['created_date'] ?? null,
+        "booking_id" => $row['booking_id'] ? intval($row['booking_id']) : null,
+        "remark" => $row['remark'] ?? ''
       ];
     }
 
