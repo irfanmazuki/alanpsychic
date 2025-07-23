@@ -515,15 +515,9 @@
           method: "GET",
           success: function (response) {
             slotsData = response;
-            if ($.fn.DataTable.isDataTable("#slotsTable")) {
-              table.destroy();
-            }
-            populateTable();
-
-            table = $("#slotsTable").DataTable({
-              pageLength: 12,
-              lengthChange: false,
-            });
+            table.clear(); // Clear existing rows
+            populateTable(); // Add new rows
+            table.draw(false); // Redraw, keep paging/sorting
           },
           error: function (xhr, status, error) {
             console.error("AJAX Error:", error);
@@ -663,12 +657,13 @@
       }
 
       function populateTable() {
-        const tbody = $("#slotsTable tbody");
-        tbody.empty();
-        slotsData.sort((a, b) => a.date.localeCompare(b.date));
+        // Use DataTables API to add rows, not tbody.append
+        table.clear();
 
         let currentDate = "";
         let stripeClass = "";
+
+        slotsData.sort((a, b) => a.date.localeCompare(b.date));
 
         slotsData.forEach((slot) => {
           if (slot.date !== currentDate) {
@@ -732,74 +727,76 @@
             remarkIcon = "";
           }
 
-          const row = `
-            <tr class="${stripeClass}">
-            <td><span style="display:none">${slot.date}</span>
-              ${formatLongDate(slot.date)}</td>
-            <td>${slot.time}</td>
-            <td>
-                ${statusCheckbox}
-            </td>
-            <td>
-                  ${
-                    slot.booking_number
-                      ? `<span style="cursor:pointer;color:#0abab5;" onclick="copyToClipboard('${slot.booking_number}')">${slot.booking_number}</span>`
-                      : "-"
-                  }
-                ${
-                  slot.isBlacklisted == 1
-                    ? ' <span title="Blacklisted user" style="color: red;">⚠️</span>'
-                    : ""
-                }
-                ${icons}
-            </td>
-            <td>
-                ${slot.name ? slot.name : "-"}
-            </td>
-            <td>
-              ${
-                slot.remark && slot.remark.trim()
-                  ? `<span>${slot.remark}</span>
-             <button class="btn btn-link btn-sm p-0 ms-2" title="Edit Remark" onclick="openRemarkPopup(${
-               slot.booking_id
-             }, '${slot.remark.replace(/'/g, "\\'")}')">
-               <i class="fa fa-pencil"></i>
-             </button>`
-                  : remarkIcon
-              }
-            </td>
-            <td>
-                ${
-                  slot.booking_number
-                    ? `<button class="btn btn-info btn-sm mb-1" onclick="openModal('${slot.booking_number}')">View Booking</button>`
-                    : slot.availability == 1
-                    ? `<button class="btn btn-primary btn-sm mb-1" onclick="openManualRegisterModal('${slot.id}', '${slot.date}', '${slot.time}')">Register</button>`
-                    : ""
-                }
-                <button class="btn btn-danger btn-sm mb-1" onclick="deleteSlot(${
-                  slot.id
-                })">Delete</button>
-            </td>
-            </tr>
-            `;
-          tbody.append(row);
+          // Remark cell with edit button if remark exists
+          let remarkCell =
+            slot.remark && slot.remark.trim()
+              ? `<span>${slot.remark}</span>
+                 <button class="btn btn-link btn-sm p-0 ms-2" title="Edit Remark" onclick="openRemarkPopup(${
+                   slot.booking_id
+                 }, '${slot.remark.replace(/'/g, "\\'")}')">
+                   <i class="fa fa-pencil"></i>
+                 </button>`
+              : remarkIcon;
+
+          // Booking number cell
+          let bookingNumberCell = `
+            ${
+              slot.booking_number
+                ? `<span style="cursor:pointer;color:#0abab5;" onclick="copyToClipboard('${slot.booking_number}')">${slot.booking_number}</span>`
+                : "-"
+            }
+            ${
+              slot.isBlacklisted == 1
+                ? ' <span title="Blacklisted user" style="color: red;">⚠️</span>'
+                : ""
+            }
+            ${icons}
+          `;
+
+          // Action cell
+          let actionCell = `
+            ${
+              slot.booking_number
+                ? `<button class="btn btn-info btn-sm mb-1" onclick="openModal('${slot.booking_number}')">View Booking</button>`
+                : slot.availability == 1
+                ? `<button class="btn btn-primary btn-sm mb-1" onclick="openManualRegisterModal('${slot.id}', '${slot.date}', '${slot.time}')">Register</button>`
+                : ""
+            }
+            <button class="btn btn-danger btn-sm mb-1" onclick="deleteSlot(${
+              slot.id
+            })">Delete</button>
+          `;
+
+          // Add row using DataTables API
+          table.row.add([
+            `<span style="display:none">${slot.date}</span>${formatLongDate(
+              slot.date
+            )}`,
+            slot.time,
+            statusCheckbox,
+            bookingNumberCell,
+            slot.name ? slot.name : "-",
+            remarkCell,
+            actionCell,
+          ]);
         });
+
+        table.draw(false); // Redraw, keep paging/sorting
       }
 
       // Enable DataTables sorting for the new column
       $(document).ready(function () {
-        loadSlots();
-        $("#filterDate").on("change", function () {
-          const filterDate = this.value;
-          table.column(0).search(filterDate).draw();
-        });
-        // Make sure DataTables is initialized with sorting enabled
         table = $("#slotsTable").DataTable({
           pageLength: 12,
           lengthChange: false,
           columnDefs: [
-            { orderable: true, targets: 5 }, // Enable sorting for Status column
+            { orderable: true, targets: 2 }, // Example: Display column
           ],
+        });
+        loadSlots();
+        $("#filterDate").on("change", function () {
+          const filterDate = this.value;
+          table.column(0).search(filterDate).draw();
         });
       });
 
@@ -986,14 +983,6 @@
           },
         });
       }
-
-      $(document).ready(function () {
-        loadSlots(); // Only call loadSlots
-        $("#filterDate").on("change", function () {
-          const filterDate = this.value;
-          table.column(0).search(filterDate).draw();
-        });
-      });
 
       function saveGoogleCalendar(
         bookingId,
