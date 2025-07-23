@@ -718,7 +718,7 @@
           var remarkIcon = `
             <span style="cursor:pointer;color:#0abab5;" onclick="openRemarkPopup(${
               slot.booking_id
-            }, '${slot.remark ? slot.remark.replace(/'/g, "\\'") : ""}')">
+            }, '${slot.remark ? escapeForJsParam(slot.remark) : ""}')">
               <i class="fa fa-commenting-o"></i> Add Remark
             </span>
           `;
@@ -733,7 +733,7 @@
               ? `<span>${slot.remark}</span>
                  <button class="btn btn-link btn-sm p-0 ms-2" title="Edit Remark" onclick="openRemarkPopup(${
                    slot.booking_id
-                 }, '${slot.remark.replace(/'/g, "\\'")}')">
+                 }, '${escapeForJsParam(slot.remark)}')">
                    <i class="fa fa-pencil"></i>
                  </button>`
               : remarkIcon;
@@ -782,6 +782,14 @@
         });
 
         table.draw(false); // Redraw, keep paging/sorting
+      }
+
+      function escapeForJsParam(str) {
+        if (!str) return "";
+        return str
+          .replace(/\\/g, "\\\\")
+          .replace(/'/g, "\\'")
+          .replace(/\r?\n/g, "\\n");
       }
 
       // Enable DataTables sorting for the new column
