@@ -893,6 +893,12 @@ function getBookingSlots($conn) {
             $stmt->bind_param("ii", $bookingId, $slotId);
             $stmt->execute();
 
+            // Update pax_number (+1)
+            $stmt = $conn->prepare("UPDATE booking SET pax_number = pax_number + 1 WHERE id = ?");
+            $stmt->bind_param("i", $bookingId);
+            $stmt->execute();
+
+            // Mark slot as unavailable
             $stmt = $conn->prepare("UPDATE timeslots SET availability = 0 WHERE id = ?");
             $stmt->bind_param("i", $slotId);
             $stmt->execute();
