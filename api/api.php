@@ -59,15 +59,6 @@ switch ($action) {
         break;
     case 'admin_login':
       handleAdminLogin();
-      break;      
-    case 'send_sms':
-      sendSms();
-      break;
-    case 'send_verification_code':
-      sendVerificationCode($conn);
-      break;
-    case 'verify_code':
-      verifyOtp($conn);
       break;
     case "submit_review":
       submitReview($conn);
@@ -99,142 +90,6 @@ switch ($action) {
 }
 
 $conn->close();
-
-function verifyOtp($conn) {
-  $phone = $_POST['phone'] ?? '';
-  $otp = $_POST['code'] ?? '';
-
-  if (!$phone || !$otp) {
-      echo json_encode(['success' => false, 'message' => 'Phone and OTP are required']);
-      exit;
-  }
-
-  // Normalize phone number: remove leading zero and prepend country code
-  $phone = ltrim($phone, '0');
-  $fullPhone = "60" . $phone;
-
-  // Prepare query to get latest OTP for this phone
-  $sql = "
-      SELECT id, OTP_code, timestamp 
-      FROM verification_codes 
-      WHERE phone_number = ? 
-      ORDER BY timestamp DESC 
-      LIMIT 1
-  ";
-
-  $stmt = $conn->prepare($sql);
-  $stmt->bind_param("s", $fullPhone);
-  $stmt->execute();
-  $result = $stmt->get_result();
-
-  if ($result && $row = $result->fetch_assoc()) {
-      $dbOtp = $row['OTP_code'];
-      $timestamp = strtotime($row['timestamp']);
-      $now = time();
-
-      $isNotExpired = ($now - $timestamp) <= 300; // 5 minutes
-      if ($otp == $dbOtp && $isNotExpired) {
-          // Mark the number as verified
-          $update = $conn->prepare("UPDATE verification_codes SET isVerified = 1 WHERE id = ?");
-          $update->bind_param("s", $row['id']);
-          $update->execute();
-
-          $sql2 = "SELECT * FROM users WHERE phone_number = ?";
-          $stmt2 = $conn->prepare($sql2);
-          $stmt2->bind_param("s", $fullPhone);
-          $stmt2->execute();
-          $result2 = $stmt2->get_result();
-
-          $userData = $result2->num_rows > 0 ? $result2->fetch_assoc() : null;
-
-          echo json_encode(['success' => true, 'message' => 'OTP verified successfully', 'user' => $userData]);
-      } elseif (!$isNotExpired) {
-          echo json_encode(['success' => false, 'message' => 'OTP has expired']);
-      } else {
-          echo json_encode(['success' => false, 'message' => 'Incorrect OTP']);
-      }
-  } else {
-      echo json_encode(['success' => false, 'message' => 'No OTP record found']);
-  }
-  exit;
-}
-
-function sendVerificationCode($conn){
-    $phone = $_POST['phone'] ?? '';
-    $phone = ltrim($phone, '0');       // remove leading 0 if any
-    $fullPhone = "60" . $phone;        // prepend Malaysian country code
-  
-    $otp = rand(10000, 99999);
-  
-    $stmt = $conn->prepare("INSERT INTO verification_codes (phone_number, OTP_code, timestamp) VALUES (?, ?, NOW())");
-    $stmt->bind_param("ss", $fullPhone, $otp);
-    $stmt->execute();
-
-    // Check for any future bookings for this user
-    $today = date('Y-m-d');
-    $stmt = $conn->prepare("
-        SELECT bs.*
-        FROM booking b
-        JOIN booking_slot bs ON bs.booking_id = b.id
-        JOIN timeslots t ON t.id = bs.timeslot_id
-        WHERE b.phone_number = ? AND t.date > ? AND b.isCancelled = 0
-    ");
-    $stmt->bind_param("ss", $fullPhone, $today);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Unable to book because there is an existing active booking. Please cancel it before making a new one."
-        ]);
-        exit;
-    }
-    
-    if ($stmt->execute()) {
-        $smsResponse = sendOtp($fullPhone, $otp);
-        echo json_encode(['success' => true, 'message' => 'OTP generated and sent', 'response' => $smsResponse]);
-        // echo json_encode(['success' => true]);
-    } else {
-        // Return the DB error message
-        echo json_encode([
-            'success' => false,
-            'message' => '❌ Network error while sending code.: ' . $stmt->error
-        ]);
-    }
-}
-
-function sendOtp($phone, $otp) {
-  $text = "RM0 Your OTP for Alan Psychic Reading is " . $otp;
-
-  require_once 'bulk360.php'; // path to your SMS class
-
-  $sms = new bulk360();
-  ob_start(); // capture the echo output
-  $sms->sendsms($phone, $text);
-  $response = ob_get_clean();
-  return ob_get_clean();
-}
-
-function sendBookingConfirmation($phone, $text) {
-  require_once 'bulk360.php'; // path to your SMS class
-
-  $sms = new bulk360();
-  ob_start(); // capture the echo output
-  $sms->sendsms($phone, $text);
-  $response = ob_get_clean();
-  return ob_get_clean();
-}
-
-function sendBookingCancellation($phone, $text) {
-  require_once 'bulk360.php'; // path to your SMS class
-
-  $sms = new bulk360();
-  ob_start(); // capture the echo output
-  $sms->sendsms($phone, $text);
-  $response = ob_get_clean();
-  return ob_get_clean();
-}
 
 function submitReview($conn) {
   $bookingNumber = $_POST['booking_number'] ?? '';
@@ -322,7 +177,7 @@ function getTimeslots($conn) {
 
 function getBookingSlots($conn) {
     $today = date('Y-m-d');
-    $sql = "SELECT id, date, time, availability FROM timeslots WHERE date >= '$today' ORDER BY date ASC, time ASC";
+    $sql = "SELECT id, date, time, availability FROM timeslots WHERE date >= '$today' and IsShown ORDER BY date ASC, time ASC";
     $result = $conn->query($sql);
   
     $rawSlots = [];
@@ -528,7 +383,6 @@ function getBookingSlots($conn) {
         $formattedDate = date("d M", strtotime($date)); // e.g., 30 Apr
 
         $text = "RM0 Alan Psychic Reading: Your booking $bookingNumber is confirmed for $formattedDate, $slotString. Kindly cancel at least 1 day before if unable to attend.";
-        sendBookingConfirmation($phone, $text);
 
         echo json_encode(["success" => true, "booking_number" => $bookingNumber]);
 
@@ -622,9 +476,6 @@ function getBookingSlots($conn) {
       $stmt2->execute();
   
       $conn->commit();
-
-      $text = "RM0 Alan Psychic Reading: Your booking $bookingNumber has been cancelled";
-      sendBookingCancellation($booking["phone_number"], $text);
       echo json_encode(["success" => true]);
     } catch (Exception $e) {
       $conn->rollback();
