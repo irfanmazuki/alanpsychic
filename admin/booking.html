@@ -638,7 +638,11 @@
                 ${statusCheckbox}
             </td>
             <td>
-                ${slot.booking_number ? slot.booking_number : "-"}
+                  ${
+                    slot.booking_number
+                      ? `<span style="cursor:pointer;color:#0abab5;" onclick="copyToClipboard('${slot.booking_number}')">${slot.booking_number}</span>`
+                      : "-"
+                  }
                 ${
                   slot.isBlacklisted == 1
                     ? ' <span title="Blacklisted user" style="color: red;">⚠️</span>'
@@ -1213,6 +1217,30 @@
         const year = dateObj.getFullYear();
         const weekday = dateObj.toLocaleString("en-US", { weekday: "long" });
         return `${day} ${month} ${year} (${weekday})`;
+      }
+
+      function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function () {
+          showCopiedPopup();
+        });
+      }
+
+      function showCopiedPopup() {
+        let popup = document.createElement("div");
+        popup.textContent = "Copied!";
+        popup.style.position = "fixed";
+        popup.style.top = "20px";
+        popup.style.right = "20px";
+        popup.style.background = "#0abab5";
+        popup.style.color = "#fff";
+        popup.style.padding = "8px 18px";
+        popup.style.borderRadius = "6px";
+        popup.style.fontWeight = "bold";
+        popup.style.zIndex = "9999";
+        document.body.appendChild(popup);
+        setTimeout(() => {
+          popup.remove();
+        }, 1200);
       }
     </script>
   </body>
