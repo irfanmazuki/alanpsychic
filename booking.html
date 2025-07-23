@@ -299,6 +299,7 @@
                 response.booking_number;
             } else {
               alert("Booking failed: " + response.message);
+              btn.disabled = false;
             }
           },
           error: function (xhr, status, error) {

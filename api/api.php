@@ -300,6 +300,28 @@ function getBookingSlots($conn) {
         return;
     }
 
+    // ✅ Check if user already has a booking from today onwards
+    $today = date('Y-m-d');
+    $stmtCheck = $conn->prepare("
+        SELECT b.id
+        FROM booking b
+        JOIN booking_slot bs ON bs.booking_id = b.id
+        JOIN timeslots t ON t.id = bs.timeslot_id
+        WHERE b.phone_number = ? AND t.date >= ? AND b.isCancelled = 0
+        LIMIT 1
+    ");
+    $stmtCheck->bind_param("ss", $phone, $today);
+    $stmtCheck->execute();
+    $stmtCheck->store_result();
+    if ($stmtCheck->num_rows > 0) {
+        echo json_encode([
+            "success" => false,
+            "message" => "You already have an active booking. Please cancel your existing booking before making a new one."
+        ]);
+        return;
+    }
+    $stmtCheck->close();
+
     $conn->begin_transaction();
     try {
         // ✅ Step 1: Check if user exists
