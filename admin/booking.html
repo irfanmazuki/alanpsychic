@@ -353,6 +353,16 @@
               <div id="manualUserInfoMsg" class="alert alert-info"></div>
               <label for="manualName" class="form-label">Name:</label>
               <input type="text" id="manualName" class="form-control mb-2" />
+              <label for="manualBookingNumber" class="form-label"
+                >Join Existing Booking Number (optional):</label
+              >
+              <input
+                type="text"
+                id="manualBookingNumber"
+                class="form-control mb-2"
+                placeholder="Enter booking number to join"
+              />
+              <div id="manualBookingStatus" class="text-danger mb-2"></div>
               <button
                 class="btn btn-success"
                 id="manualConfirmNewBtn"
@@ -1082,6 +1092,9 @@
       function confirmManualBooking() {
         const phone = document.getElementById("manualPhone").value.trim();
         const name = document.getElementById("manualName")?.value.trim();
+        const bookingNumber = document
+          .getElementById("manualBookingNumber")
+          .value.trim();
         const statusDiv = document.getElementById("manualRegisterStatus");
 
         if (!phone) {
@@ -1095,7 +1108,7 @@
 
         // If user exists, just book the slot
         if (manualUserId) {
-          bookSlotForExistingUser(phone, name);
+          bookSlotForExistingUser(phone, name, bookingNumber);
           return;
         }
 
@@ -1109,7 +1122,7 @@
           success: function (response) {
             if (response.success) {
               alert("Registration successful! Booking the slot now...");
-              bookSlotForNewUser(response.userId, phone);
+              bookSlotForNewUser(response.userId, phone, bookingNumber);
             } else {
               statusDiv.textContent =
                 response.message || "Registration failed.";
@@ -1122,7 +1135,7 @@
         });
       }
 
-      function bookSlotForExistingUser(phone, name) {
+      function bookSlotForExistingUser(phone, name, bookingNumber) {
         const slotId = currentSlotId;
         $.ajax({
           url: "../api/api.php?action=book_slot",
@@ -1132,6 +1145,7 @@
             phone: phone,
             user_id: manualUserId,
             name: name,
+            booking_number: bookingNumber,
           },
           success: function (response) {
             if (response.success) {
@@ -1151,12 +1165,17 @@
         });
       }
 
-      function bookSlotForNewUser(userId, phone) {
+      function bookSlotForNewUser(userId, phone, bookingNumber) {
         const slotId = currentSlotId;
         $.ajax({
           url: "../api/api.php?action=book_slot",
           method: "POST",
-          data: { slot_id: slotId, user_id: userId, phone: phone },
+          data: {
+            slot_id: slotId,
+            user_id: userId,
+            phone: phone,
+            booking_number: bookingNumber,
+          },
           success: function (response) {
             if (response.success) {
               alert("Slot booked successfully!");

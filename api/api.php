@@ -806,6 +806,7 @@ function getBookingSlots($conn) {
     $phone = $_POST['phone'] ?? null;
     $userId = $_POST['user_id'] ?? null;
     $name = $_POST['name'] ?? null;
+    $bookingNumber = $_POST['booking_number'] ?? null;
 
     if (!$slotId || !$phone) {
         echo json_encode(['success' => false, 'message' => 'Missing slot or phone.']);
@@ -824,6 +825,86 @@ function getBookingSlots($conn) {
         return;
     }
     $stmt->close();
+
+    // If bookingNumber is provided, validate it
+    if ($bookingNumber) {
+        // Check booking exists, is active, and date matches
+        $stmt = $conn->prepare("SELECT id FROM booking WHERE booking_number = ? AND isCancelled = 0");
+        $stmt->bind_param("s", $bookingNumber);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->num_rows == 0) {
+            echo json_encode(['success' => false, 'message' => 'Booking number not found or already cancelled.']);
+            return;
+        }
+        $bookingRow = $result->fetch_assoc();
+        $bookingId = $bookingRow['id'];
+
+        // Check all slots under this booking are for the same date and consecutive
+        $slotDates = [];
+        $slotTimes = [];
+        $stmt2 = $conn->prepare("SELECT t.date, t.time FROM booking_slot bs JOIN timeslots t ON bs.timeslot_id = t.id WHERE bs.booking_id = ?");
+        $stmt2->bind_param("i", $bookingId);
+        $stmt2->execute();
+        $result2 = $stmt2->get_result();
+        while ($row = $result2->fetch_assoc()) {
+            $slotDates[] = $row['date'];
+            $slotTimes[] = $row['time'];
+        }
+        $stmt2->close();
+
+        // Check all dates are the same and match the new slot
+        $stmt = $conn->prepare("SELECT availability, date FROM timeslots WHERE id = ?");
+        $stmt->bind_param("i", $slotId);
+        $stmt->execute();
+        $stmt->bind_result($availability, $slotDate);
+        if (!$stmt->fetch() || $availability != 1) {
+            echo json_encode(['success' => false, 'message' => 'Slot not available.']);
+            return;
+        }
+        $stmt->close();
+        $allSameDate = count(array_unique($slotDates)) === 1 && $slotDates[0] === $slotDate;
+        if (!$allSameDate) {
+            echo json_encode(['success' => false, 'message' => 'Cannot join booking with different date.']);
+            return;
+        }
+
+        // Check times are consecutive (new slot must be next to existing times)
+        $slotTimes[] = $conn->query("SELECT time FROM timeslots WHERE id = $slotId")->fetch_assoc()['time'];
+        sort($slotTimes);
+        $consecutive = true;
+        for ($i = 1; $i < count($slotTimes); $i++) {
+            $prev = strtotime($slotTimes[$i - 1]);
+            $curr = strtotime($slotTimes[$i]);
+            if (($curr - $prev) != 3600) { // 1 hour difference
+                $consecutive = false;
+                break;
+            }
+        }
+        if (!$consecutive) {
+            echo json_encode(['success' => false, 'message' => 'Slots must be consecutive to join booking.']);
+            return;
+        }
+
+        // Add slot to booking_slot and update timeslot
+        $conn->begin_transaction();
+        try {
+            $stmt = $conn->prepare("INSERT INTO booking_slot (booking_id, timeslot_id) VALUES (?, ?)");
+            $stmt->bind_param("ii", $bookingId, $slotId);
+            $stmt->execute();
+
+            $stmt = $conn->prepare("UPDATE timeslots SET availability = 0 WHERE id = ?");
+            $stmt->bind_param("i", $slotId);
+            $stmt->execute();
+
+            $conn->commit();
+            echo json_encode(['success' => true, 'booking_number' => $bookingNumber]);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        return;
+    }
 
     // Generate booking number
     $bookingNumber = generateBookingNumber();
