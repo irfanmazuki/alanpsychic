@@ -278,6 +278,17 @@ function getBookingSlots($conn) {
       echo json_encode(["success" => false, "message" => "Invalid ID."]);
       return;
     }
+
+    // check if the slot is booked
+    $stmtCheck = $conn->prepare("SELECT id FROM timeslots WHERE id = ? and availability = 0");
+    $stmtCheck->bind_param("i", $id);
+    $stmtCheck->execute();
+    $stmtCheck->store_result();
+    if ($stmtCheck->num_rows > 0) {
+      echo json_encode(["success" => false, "message" => "Cannot delete slot, it is already booked. Please cancel first before deleting."]);
+      $stmtCheck->close();
+      return;
+    }
   
     $stmt = $conn->prepare("DELETE FROM timeslots WHERE id = ?");
     $stmt->bind_param("i", $id);
