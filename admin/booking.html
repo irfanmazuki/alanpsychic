@@ -47,6 +47,13 @@
       .modal-body {
         overflow-x: auto;
       }
+
+      .isshown-checkbox {
+        width: 24px;
+        height: 24px;
+        accent-color: #0abab5;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
@@ -126,6 +133,7 @@
           <tr>
             <th>Date</th>
             <th>Time</th>
+            <th>Display</th>
             <th>Booking Number</th>
             <th>Name</th>
             <th>Booked Date</th>
@@ -612,10 +620,23 @@
             }
           }
 
+          // Enable/Disable checkbox column (shows IsShown value and allows toggling)
+          let statusCheckbox = `
+            <span style="display:none">${slot.IsShown}</span>
+            <input type="checkbox" class="isshown-checkbox"
+              ${slot.IsShown == 1 ? "checked" : ""}
+              onclick="toggleIsShown(${slot.id}, this.checked)"
+              title="${slot.IsShown == 1 ? "Enabled" : "Disabled"}"
+            >
+          `;
+
           const row = `
             <tr class="${stripeClass}">
             <td>${formatLongDate(slot.date)}</td>
             <td>${slot.time}</td>
+            <td>
+                ${statusCheckbox}
+            </td>
             <td>
                 ${slot.booking_number ? slot.booking_number : "-"}
                 ${
@@ -648,6 +669,23 @@
           tbody.append(row);
         });
       }
+
+      // Enable DataTables sorting for the new column
+      $(document).ready(function () {
+        loadSlots();
+        $("#filterDate").on("change", function () {
+          const filterDate = this.value;
+          table.column(0).search(filterDate).draw();
+        });
+        // Make sure DataTables is initialized with sorting enabled
+        table = $("#slotsTable").DataTable({
+          pageLength: 12,
+          lengthChange: false,
+          columnDefs: [
+            { orderable: true, targets: 5 }, // Enable sorting for Status column
+          ],
+        });
+      });
 
       function openModal(bookingNumber) {
         currentBookingNumber = bookingNumber;
@@ -1129,6 +1167,24 @@
           error: function (xhr, status, error) {
             console.error("AJAX Error:", error);
             alert("Error booking slot.");
+          },
+        });
+      }
+
+      function toggleIsShown(slotId, isChecked) {
+        $.ajax({
+          url: "../api/api.php?action=update_is_shown",
+          method: "POST",
+          data: { id: slotId, IsShown: isChecked ? 1 : 0 },
+          success: function (response) {
+            if (response.success) {
+              loadSlots();
+            } else {
+              alert("Failed to update slot visibility: " + response.message);
+            }
+          },
+          error: function () {
+            alert("Error updating slot visibility.");
           },
         });
       }

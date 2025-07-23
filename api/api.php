@@ -90,6 +90,9 @@ switch ($action) {
     case 'book_slot':
       bookSlot($conn);
       break;
+    case 'update_is_shown':
+      updateIsShown($conn);
+      break;
     default:
       echo json_encode(["error" => "No valid action provided."]);
       break;
@@ -271,6 +274,7 @@ function getTimeslots($conn) {
             t.date,
             t.time,
             t.availability,
+            t.IsShown,
             b.ws_count,
             b.calendar_count,
             b.booking_number,
@@ -302,6 +306,7 @@ function getTimeslots($conn) {
         "date" => $row['date'],
         "time" => date("g:i A", strtotime($row['time'])),
         "availability" => $row['availability'],
+        "IsShown" => isset($row['IsShown']) ? intval($row['IsShown']) : 1,
         "booking_number" => $row['booking_number'] ?? null,
         "isBlacklisted" => $row['isBlacklisted'],
         "name" => $row['name'],
@@ -981,6 +986,25 @@ function getBookingSlots($conn) {
     } catch (Exception $e) {
         $conn->rollback();
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+  }
+
+  function updateIsShown($conn) {
+    $slotId = $_POST['id'] ?? null;
+    $isShown = isset($_POST['IsShown']) ? intval($_POST['IsShown']) : 0;
+
+    if (!$slotId) {
+        echo json_encode(['success' => false, 'message' => 'Missing slot ID.']);
+        return;
+    }
+
+    $stmt = $conn->prepare("UPDATE timeslots SET IsShown = ? WHERE id = ?");
+    $stmt->bind_param("ii", $isShown, $slotId);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => $stmt->error]);
     }
   }
   
